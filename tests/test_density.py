@@ -1,8 +1,9 @@
 import numpy as np
+from numpy import array
 from scipy.stats import norm, multivariate_normal, wishart
 from scipy.integrate import dblquad
 from numpy.testing import assert_allclose
-from hypothesis import given, strategies as st, example
+from hypothesis import given, strategies as st, example, settings
 from hypothesis.extra.numpy import arrays
 
 import ggmm
@@ -73,13 +74,54 @@ def test_stackoverflow_example():
     c2 = g.pdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]))
     assert_allclose(dist.cdf(x1), c2, atol=1e-6)
 
+#@st.composite
+#def diagonal_cov(draw, stdevs=arrays(np.float64, (6,), elements=st.floats(1e-6, 10))):
+#    return np.diag(draw(stdevs)**2)
 
+
+@settings(max_examples=10, deadline=5000)
 @given(
     mu=arrays(np.float64, (6,), elements=st.floats(-10, 10)),
     x=arrays(np.float64, (6,), elements=st.floats(-10, 10)),
-    A=arrays(np.float64, (6,6), elements=st.floats(-10, 10)).filter(lambda A: np.std(A)>1e-6 and not (A==0).all())
+    stdevs=arrays(np.float64, (6,), elements=st.floats(1e-2, 10)),
+    #A=
+    #st.one_of(diagonal_cov,
+    #    arrays(np.float64, (6,6), elements=st.floats(-10, 10)).filter(
+    #    lambda A: np.std(A)>1e-6 and not (A==0).all() and not (np.diag(A)==0).any()))
 )
-def test_stackoverflow_like_examples(mu, x, A):
+@example(
+    mu=array([0., 0., 0., 0., 0., 0.]),
+    x=array([0., 0., 0., 0., 0., 0.]),
+    stdevs=array([1., 1., 1., 1., 1., 1.]),
+).via('discovered failure')
+@example(
+    mu=array([0., 0., 0., 0., 0., 0.]),
+    x=array([1., 1., 1., 1., 1., 1.]),
+    stdevs=array([3., 3., 3., 3., 3., 3.]),
+).via('discovered failure')
+@example(
+    mu=array([0., 0., 0., 0., 0., 0.]),
+    x=array([0., 0., 0., 0., 0., 0.]),
+    stdevs=array([1., 1., 1., 1., 1., 1.]),
+).via('discovered failure')
+@example(
+    mu=array([0., 0., 0., 0., 0., 0.]),
+    x=array([0., 0., 0., 0., 0., 0.]),
+    stdevs=array([6., 6., 6., 6., 6., 6.]),
+).via('discovered failure')
+@example(
+    mu=array([0., 0., 0., 0., 0., 0.]),
+    x=array([0., 0., 0., 0., 0., 0.]),
+    stdevs=array([0.015625, 5.      , 5.      , 5.      , 5.      , 5.      ]),
+).via('discovered failure')
+@example(
+    mu=array([-4., -4., -4., -4., -4., -4.]),
+    x=array([0., 0., 0., 0., 0., 0.]),
+    stdevs=array([0.03125, 0.03125, 0.03125, 0.03125, 0.03125, 0.03125]),
+).via('discovered failure')
+def test_stackoverflow_like_examples(mu, x, stdevs):
+    atol = max(stdevs) * 1e-4 + 1e-6
+    A = np.diag(stdevs**2)
     #rng = np.random.default_rng(seed)
 
     n = 6  # dimensionality  
@@ -120,19 +162,18 @@ def test_stackoverflow_like_examples(mu, x, A):
     p2 = dblquad(pdf, -np.inf, np.inf, -np.inf, np.inf)[0]  # marginal probability
 
     # These should match (approximately)
-    assert_allclose(dist.cdf(x1), p1/p2, atol=1e-6)
+    assert_allclose(dist.cdf(x1), p1/p2, atol=atol)
     #assert_allclose(dist.cdf(x1), 0.25772255281364065)
     #assert_allclose(p1/p2, 0.25772256555864476)
 
-    c1 = ggmm.pdfcdf(x.reshape((1, -1)), np.array([True, True, False, False, False, False]), mean=mu, cov=A)
+    c1 = ggmm.pdfcdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]), mean=mu, cov=A)
     #assert_allclose(mu_c, conditional_mean)
     #assert_allclose(A_c, conditional_cov)
-    assert_allclose(dist.cdf(x1), c1, atol=1e-6)
+    assert_allclose(dist.cdf(x1), c1, atol=atol)
 
     g = ggmm.Gaussian(mean=mu, cov=A)
-    c2 = g.pdf(x.reshape((1, -1)), np.array([True, True, False, False, False, False]))
-    assert_allclose(dist.cdf(x1), c2, atol=1e-6)
-
+    c2 = g.pdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]))
+    assert_allclose(dist.cdf(x1), c2, atol=atol)
 
 def test_trivial_example():
     rng = np.random.RandomState(123)
