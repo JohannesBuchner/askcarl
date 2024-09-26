@@ -35,43 +35,32 @@ def pdfcdf(x, mask, mean, cov):
     mu_upper = mean[upper_idx]  # Mean for upper bounds
     cov_exact = cov[np.ix_(exact_idx, exact_idx)]  # Covariance for exact values
     cov_upper = cov[np.ix_(upper_idx, upper_idx)]  # Covariance for upper bounds
-    cov_cross_21 = cov[np.ix_(exact_idx, upper_idx)]  # Cross-covariance between exact and upper bounds
-    cov_cross_12 = cov_cross_21.T
+    cov_cross = cov[np.ix_(exact_idx, upper_idx)]  # Cross-covariance between exact and upper bounds
 
     # Extract values from x
     x_exact = x[:,exact_idx]  # Known values for the PDF
     x_upper = x[:,upper_idx]  # Upper bounds for the CDF
 
-    print("pdfcdf: input: upper", x_upper, mu_upper, "given", x_exact, mu_exact)
     # Compute the conditional mean and covariance for the remaining dimensions (upper bounds)
     if len(upper_idx) > 0:
         inv_cov_exact = np.linalg.inv(cov_exact)
-        print("pdfcdf: inv_cov_exact", n_exact, inv_cov_exact, x_exact)
         assert inv_cov_exact.shape == (n_exact, n_exact)
-        print("pdfcdf: cov_cross:", cov_cross_12, cov_cross_21)
-        newcov = (cov_cross_12 @ inv_cov_exact @ (x_exact[0] - mu_exact)).reshape((1, -1))
-        print("pdfcdf: newcov1", newcov.shape, newcov)
-        newcov = ((cov_cross_12 @ inv_cov_exact) @ (x_exact - mu_exact.reshape((1, -1))).T).T
-        print("pdfcdf: newcov", newcov.shape, newcov)
-        newcov3 = np.einsum('ij,jk,mk->mi', cov_cross_12, inv_cov_exact, x_exact - mu_exact.reshape((1, -1)))
-        print("pdfcdf: newcov3", newcov3.shape, newcov3)
-        #assert newcov.shape == (len(x), n),  (len(mu_exact), len(mu_upper), len(mu_exact), newcov.shape)
+        newcov = np.einsum('ji,jk,mk->mi', cov_cross, inv_cov_exact, x_exact - mu_exact.reshape((1, -1)))
+        assert newcov.shape == (len(x), n_upper), (newcov.shape, (len(x), n_upper))
         conditional_mean = mu_upper[None,:] + newcov
-        conditional_cov = cov_upper - cov_cross_12 @ inv_cov_exact @ cov_cross_21
+        conditional_cov = cov_upper - cov_cross.T @ inv_cov_exact @ cov_cross
         assert conditional_cov.shape == (n_upper, n_upper)
     else:
         # If there are no upper bounds, the conditional mean and cov are just the original ones
         conditional_mean = mu_exact
         conditional_cov = cov_exact
 
-    print("pdfcdf:", conditional_mean, conditional_cov)
     assert conditional_mean.shape == (len(x), n_upper), (conditional_mean.shape, len(x), n_upper)
     # Create the conditional multivariate normal distributions
     dist_conditional = multivariate_normal(mean=np.zeros(len(conditional_cov)), cov=conditional_cov)  # Conditional MVN
 
     # Compute the CDF for the upper bounds
     if len(upper_idx) > 0:
-        print("eval:", x_upper, conditional_mean, dist_conditional.mean, dist_conditional.cov)
         cdf_value = dist_conditional.cdf(x_upper - conditional_mean)
     else:
         # If no upper bounds, use PDF
