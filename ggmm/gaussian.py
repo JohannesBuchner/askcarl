@@ -118,7 +118,7 @@ class Gaussian:
 
         return self.rvs[key]
 
-    def conditional_pdf(self, x, mask=Ellipsis):
+    def _prepare_conditional_pdf(self, x, mask=Ellipsis):
         """
         Computes the mixed PDF and CDF for a multivariate Gaussian distribution.
 
@@ -135,6 +135,7 @@ class Gaussian:
         """
         mean = self.mean
         if mask is Ellipsis:
+            del mask
             mask = np.ones(len(mean), dtype=bool)
         assert mask.shape == (self.ndim,), (self.ndim, mask.shape)
 
@@ -163,6 +164,26 @@ class Gaussian:
             conditional_mean = mu_exact.reshape((1, -1))
 
         assert x_upper.shape == ((len(x), n_upper)), (x_upper.shape, ((len(x), n_upper)))
+        return n_upper, n_exact, cov_cross, cov_exact, inv_cov_exact, x_exact, x_upper, mu_exact, mu_upper, conditional_mean, dist_conditional
+
+    def conditional_pdf(self, x, mask=Ellipsis):
+        """
+        Computes the mixed PDF and CDF for a multivariate Gaussian distribution.
+
+        Parameters:
+        - x: The point (vector) at which to evaluate the probability.
+             For dimensions where `mask == 0`, this is a value for the PDF.
+             For dimensions where `mask == 1`, this is an upper bound for the CDF.
+        - mask: A boolean mask of the same shape as `x`.
+        - mean: The mean vector of the multivariate normal distribution.
+        - cov: The covariance matrix of the multivariate normal distribution.
+
+        Returns:
+        - prob: The combined PDF and CDF value.
+        """
+        n_upper, n_exact, cov_cross, cov_exact, inv_cov_exact, x_exact, x_upper, mu_exact, mu_upper, conditional_mean, dist_conditional = \
+            self._prepare_conditional_pdf(x=x, mask=mask)
+
         # Compute the CDF for the upper bounds
         if n_upper == 0:
             # trivial case: PDF only
@@ -177,5 +198,72 @@ class Gaussian:
         
         return cdf_value
 
+    def conditional_logpdf(self, x, mask=Ellipsis):
+        """
+        Computes the mixed PDF and CDF for a multivariate Gaussian distribution.
 
+        Parameters:
+        - x: The point (vector) at which to evaluate the probability.
+             For dimensions where `mask == 0`, this is a value for the PDF.
+             For dimensions where `mask == 1`, this is an upper bound for the CDF.
+        - mask: A boolean mask of the same shape as `x`.
+        - mean: The mean vector of the multivariate normal distribution.
+        - cov: The covariance matrix of the multivariate normal distribution.
+
+        Returns:
+        - prob: The combined PDF and CDF value.
+        """
+        n_upper, n_exact, cov_cross, cov_exact, inv_cov_exact, x_exact, x_upper, mu_exact, mu_upper, conditional_mean, dist_conditional = \
+            self._prepare_conditional_pdf(x=x, mask=mask)
+
+        # Compute the CDF for the upper bounds
+        if n_upper == 0:
+            # trivial case: PDF only
+            logcdf_value = multivariate_normal(np.zeros(self.ndim), self.cov).logpdf(x - self.mean.reshape((1, -1)))
+        else:
+            if n_exact == 0:
+                # trivial case: CDF only
+                logpdf_value = 0
+            else:
+                logpdf_value = multivariate_normal(mu_exact, cov_exact).logpdf(x_exact)
+            logcdf_value = logpdf_value + dist_conditional.logcdf(x_upper - conditional_mean)
+        
+        return logcdf_value
+
+    def pdf(self, x, mask):
+        """
+        Computes the mixed PDF and CDF for a multivariate Gaussian distribution.
+
+        Parameters:
+        - x: The point (vector) at which to evaluate the probability.
+             For dimensions where `mask == 0`, this is a value for the PDF.
+             For dimensions where `mask == 1`, this is an upper bound for the CDF.
+        - mask: A boolean mask of the same shape as `x`.
+        - mean: The mean vector of the multivariate normal distribution.
+        - cov: The covariance matrix of the multivariate normal distribution.
+
+        Returns:
+        - prob: The combined PDF and CDF value.
+        """
+        mean = self.mean
+        cdf_values = np.zeros(len(x)) * np.nan
+        powers = mask @ self.powers
+        unique_powers, unique_indices = np.unique(powers, return_index=True)
+        for power, index in zip(unique_powers, unique_indices):
+            mask_here = mask[index, :]
+            members = powers == power
+            cdf_values[members] == self.conditional_pdf(x[members,:], mask_here)
+
+
+class GaussianMixture:
+    def __init__(self, weights, means, covs):
+        assert len(weights) == len(means)
+        assert len(weights) == len(covs)
+        self.members = [Gaussian(mean, cov) for mean, cov in zip(means, covs)]
+        self.weights = weights
+
+    def pdf(self, x, mask):
+        return sum(
+            w * g.pdf(x, mask) 
+            for w, g in zip(self.weights, self.members))
 
