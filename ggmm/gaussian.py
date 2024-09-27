@@ -245,14 +245,42 @@ class Gaussian:
         Returns:
         - prob: The combined PDF and CDF value.
         """
-        mean = self.mean
-        cdf_values = np.zeros(len(x)) * np.nan
-        powers = mask @ self.powers
+        assert mask.shape == (len(x), self.ndim), (mask.shape, (len(x), self.ndim))
+        assert x.shape == (len(mask), self.ndim), (x.shape, (len(x), self.ndim))
+        pdf_values = np.zeros(len(x)) * np.nan
+        powers = np.einsum('ij,j->i', mask * 1, self.powers)
         unique_powers, unique_indices = np.unique(powers, return_index=True)
         for power, index in zip(unique_powers, unique_indices):
-            mask_here = mask[index, :]
             members = powers == power
-            cdf_values[members] == self.conditional_pdf(x[members,:], mask_here)
+            pdf_values[members] = self.conditional_pdf(x[members,:], mask[index, :])
+        assert np.isfinite(pdf_values).all(), pdf_values
+        return pdf_values
+
+
+    def logpdf(self, x, mask):
+        """
+        Computes the mixed PDF and CDF for a multivariate Gaussian distribution.
+
+        Parameters:
+        - x: The point (vector) at which to evaluate the probability.
+             For dimensions where `mask == 0`, this is a value for the PDF.
+             For dimensions where `mask == 1`, this is an upper bound for the CDF.
+        - mask: A boolean mask of the same shape as `x`.
+        - mean: The mean vector of the multivariate normal distribution.
+        - cov: The covariance matrix of the multivariate normal distribution.
+
+        Returns:
+        - prob: The combined PDF and CDF value.
+        """
+        assert mask.shape == (len(x), self.ndim), (mask.shape, (len(x), self.ndim))
+        assert x.shape == (len(mask), self.ndim), (x.shape, (len(x), self.ndim))
+        logpdf_values = np.zeros(len(x)) * np.nan
+        powers = (mask * 1) @ self.powers
+        unique_powers, unique_indices = np.unique(powers, return_index=True)
+        for power, index in zip(unique_powers, unique_indices):
+            members = powers == power
+            logpdf_values[members] = self.conditional_logpdf(x[members,:], mask[index, :])
+        return logpdf_values
 
 
 class GaussianMixture:

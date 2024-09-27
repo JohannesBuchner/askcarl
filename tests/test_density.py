@@ -52,6 +52,7 @@ def test_stackoverflow_example():
     dist = multivariate_normal(mean=mu_c, cov=A_c)
     print("truth:", mu_c, A_c)
     pdf_part = multivariate_normal(mean=mu2, cov=s22).pdf(x2)
+    logpdf_part = multivariate_normal(mean=mu2, cov=s22).logpdf(x2)
 
     # Check (assumes q = 2)
     def pdf(y, x):
@@ -75,6 +76,9 @@ def test_stackoverflow_example():
     g = ggmm.Gaussian(mean=mu, cov=A)
     c2 = g.conditional_pdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]))
     assert_allclose(dist.cdf(x1) * pdf_part, c2, atol=1e-6)
+
+    logc2 = g.conditional_logpdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]))
+    assert_allclose(dist.logcdf(x1) + logpdf_part, logc2)
 
 def valid_QR(vectors):
     q, r = np.linalg.qr(vectors)
@@ -274,7 +278,12 @@ def test_single(mean_cov):
     rv_truth = multivariate_normal(mu, cov)
 
     xi = np.random.randn(1, len(mu))  # A random vector of same dimensionality as `mu`
-    assert np.allclose(rv.conditional_pdf(xi), rv_truth.pdf(xi[0]))
+    assert_allclose(rv.conditional_pdf(xi), rv_truth.pdf(xi[0]))
+    assert_allclose(rv.conditional_pdf(xi, np.array([True] * ndim)), rv_truth.pdf(xi[0]))
+
+    assert_allclose(rv.pdf(xi, np.array([[True] * ndim])), rv_truth.pdf(xi[0]))
+
+    assert_allclose(rv.logpdf(xi, np.array([[True] * ndim])), rv_truth.logpdf(xi[0]))
 
 @st.composite
 def mean_and_diag_stdevs2(draw):
@@ -289,6 +298,12 @@ def mean_and_diag_stdevs2(draw):
 @given(mean_and_diag_stdevs2())
 @example(
     mean_and_cov=(2, array([1., 0.]), array([1., 1.]), array([0., 0.]), 1),
+).via('discovered failure')
+@example(
+    mean_and_cov=(2, array([0., 0.]), array([2., 2.]), array([77., 77.]), 0),
+).via('discovered failure')
+@example(
+    mean_and_cov=(2, array([0., 0.]), array([1., 1.]), array([39., 39.]), 0),
 ).via('discovered failure')
 def test_single_with_UL(mean_and_cov):
     ndim, mu, stdevs, x, i = mean_and_cov
@@ -318,3 +333,8 @@ def test_single_with_UL(mean_and_cov):
     #print("Expected:", pa_expected)
     # pa_expected = 1 * rv_truth.pdf(xi)
     assert_allclose(pa, pa_expected)
+    pb = rv.pdf(xi, np.array([mask,mask]))
+    assert_allclose(pb, pa_expected)
+    logpa_expected = np.array([0, -np.inf]) + rv_truth.logpdf(xi[:,mask])
+    logpa = rv.logpdf(xi, np.array([mask,mask]))
+    assert_allclose(logpa, logpa_expected)
