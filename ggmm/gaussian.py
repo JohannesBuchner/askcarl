@@ -66,8 +66,9 @@ def pdfcdf(x, mask, mean, cov):
         # If no upper bounds, use PDF
         cdf_value = 1.0
 
+    pdf_value = multivariate_normal(mu_exact, cov_exact).pdf(x_exact)
     # Return the combined result (PDF * CDF)
-    return cdf_value #, conditional_mean, conditional_cov, x_exact
+    return cdf_value * pdf_value
 
 
 class Gaussian:
@@ -94,7 +95,8 @@ class Gaussian:
             cov_upper = cov[np.ix_(upper_idx, upper_idx)]  # Covariance for upper bounds
             cov_cross = cov[np.ix_(exact_idx, upper_idx)]  # Cross-covariance between exact and upper bounds
 
-            # Compute the conditional mean and covariance for the upper bounds dimensions
+            # Compute the conditional mean and covariance as a function of the upper bounds dimensions
+            # this is conditioned at the position of the exact coordinates.
             if n_upper > 0:
                 inv_cov_exact = np.linalg.inv(cov_exact)
                 assert inv_cov_exact.shape == (n_exact, n_exact)
@@ -112,7 +114,7 @@ class Gaussian:
                 rv = multivariate_normal(mean=np.zeros(len(conditional_cov)), cov=conditional_cov)
             else:
                 rv = None
-            self.rvs[key] = cov_cross, inv_cov_exact, rv
+            self.rvs[key] = cov_cross, cov_exact, inv_cov_exact, rv
 
         return self.rvs[key]
 
@@ -136,7 +138,7 @@ class Gaussian:
             mask = np.ones(len(mean), dtype=bool)
         assert mask.shape == (self.ndim,), (self.ndim, mask.shape)
 
-        cov_cross, inv_cov_exact, dist_conditional = self.get_conditional_rv(mask)
+        cov_cross, cov_exact, inv_cov_exact, dist_conditional = self.get_conditional_rv(mask)
         exact_idx, = np.where(mask)  # Indices of exact values (PDF)
         upper_idx, = np.where(~mask)  # Indices of upper bounds (CDF)
         n_exact = len(exact_idx)
@@ -165,7 +167,7 @@ class Gaussian:
         # print("shift:", x_upper, conditional_mean, len(exact_idx), dist_conditional is not None)
         if n_upper == 0:
             # trivial case: PDF only
-            print("trivial case: PDF only", conditional_mean, dist_conditional)
+            # print("trivial case: PDF only", conditional_mean, dist_conditional)
             cdf_value = multivariate_normal(np.zeros(self.ndim), self.cov).pdf(x - self.mean.reshape((1, -1)))
         #elif n_exact == 0:
         #    # trivial case: CDF only
@@ -173,7 +175,11 @@ class Gaussian:
         #    cdf_value = multivariate_normal(np.zeros(self.ndim), self.cov).cdf(x - self.mean.reshape((1, -1)))
         else:
             # print("conditional CDF case", dist_conditional.mean, dist_conditional.cov, x_upper - conditional_mean)
-            cdf_value = dist_conditional.cdf(x_upper - conditional_mean)
+            if n_exact == 0:
+                pdf_value = 1
+            else:
+                pdf_value = multivariate_normal(mu_exact, cov_exact).pdf(x_exact)
+            cdf_value = pdf_value * dist_conditional.cdf(x_upper - conditional_mean)
         # print("result:", cdf_value)
         
         return cdf_value

@@ -3,7 +3,7 @@ from numpy import array
 from scipy.stats import norm, multivariate_normal, wishart
 from scipy.integrate import dblquad
 from numpy.testing import assert_allclose
-from hypothesis import given, strategies as st, example, settings, HealthCheck
+from hypothesis import given, strategies as st, example, settings
 from hypothesis.extra.numpy import arrays
 
 import ggmm
@@ -51,6 +51,7 @@ def test_stackoverflow_example():
     assert A_c.shape == (q, q)
     dist = multivariate_normal(mean=mu_c, cov=A_c)
     print("truth:", mu_c, A_c)
+    pdf_part = multivariate_normal(mean=mu2, cov=s22).pdf(x2)
 
     # Check (assumes q = 2)
     def pdf(y, x):
@@ -59,8 +60,9 @@ def test_stackoverflow_example():
     p1 = dblquad(pdf, -np.inf, x[0], -np.inf, x[1])[0]  # joint probability
     p2 = dblquad(pdf, -np.inf, np.inf, -np.inf, np.inf)[0]  # marginal probability
 
+    print("comparison:", p1, p2, dist.cdf(x1), pdf_part)
     # These should match (approximately)
-    assert_allclose(dist.cdf(x1), p1/p2, atol=1e-6)
+    assert_allclose(dist.cdf(x1) * pdf_part, p1, atol=1e-6)
     #assert_allclose(dist.cdf(x1), 0.25772255281364065)
     #assert_allclose(p1/p2, 0.25772256555864476)
 
@@ -68,11 +70,11 @@ def test_stackoverflow_example():
     #assert_allclose(mu_c, conditional_mean)
     #assert_allclose(A_c, conditional_cov)
     print("truth eval:", x1, dist.mean, dist.cov, dist.cdf(x1), c1)
-    assert_allclose(dist.cdf(x1), c1, atol=1e-6)
+    assert_allclose(dist.cdf(x1) * pdf_part, c1, atol=1e-6)
 
     g = ggmm.Gaussian(mean=mu, cov=A)
     c2 = g.pdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]))
-    assert_allclose(dist.cdf(x1), c2, atol=1e-6)
+    assert_allclose(dist.cdf(x1) * pdf_part, c2, atol=1e-6)
 
 #@st.composite
 #def diagonal_cov(draw, stdevs=arrays(np.float64, (6,), elements=st.floats(1e-6, 10))):
@@ -128,9 +130,6 @@ def test_covariance_making():
     assert valid_covariance_matrix(cov)
 
 def valid_covariance_matrix(A):
-    #n = len(A)
-    #A = A + A.T + np.eye(n) * n
-    #print(A)
     if not np.isfinite(A).all():
         return False
     if not np.std(A) > 1e-6:
@@ -150,46 +149,12 @@ def valid_covariance_matrix(A):
 
     return True
 
-"""
-
-@example(
-    mu=array([0., 0., 0., 0., 0., 0.]),
-    x=array([0., 0., 0., 0., 0., 0.]),
-    A=np.diag(array([1., 1., 1., 1., 1., 1.])**2),
-).via('discovered failure')
-@example(
-    mu=array([0., 0., 0., 0., 0., 0.]),
-    x=array([1., 1., 1., 1., 1., 1.]),
-    A=np.diag(array([3., 3., 3., 3., 3., 3.])**2),
-).via('discovered failure')
-@example(
-    mu=array([0., 0., 0., 0., 0., 0.]),
-    x=array([0., 0., 0., 0., 0., 0.]),
-    A=np.diag(array([1., 1., 1., 1., 1., 1.])**2),
-).via('discovered failure')
-@example(
-    mu=array([0., 0., 0., 0., 0., 0.]),
-    x=array([0., 0., 0., 0., 0., 0.]),
-    A=np.diag(array([6., 6., 6., 6., 6., 6.])**2),
-).via('discovered failure')
-@example(
-    mu=array([0., 0., 0., 0., 0., 0.]),
-    x=array([0., 0., 0., 0., 0., 0.]),
-    A=np.diag(array([0.015625, 5.      , 5.      , 5.      , 5.      , 5.      ])**2),
-).via('discovered failure')
-@example(
-    mu=array([-4., -4., -4., -4., -4., -4.]),
-    x=array([0., 0., 0., 0., 0., 0.]),
-    stdevs=array([0.03125, 0.03125, 0.03125, 0.03125, 0.03125, 0.03125]),
-).via('discovered failure')
-"""
-
 @settings(max_examples=100, deadline=None)
 @given(
     mu=arrays(np.float64, (6,), elements=st.floats(-10, 10)),
     x=arrays(np.float64, (6,), elements=st.floats(-10, 10)),
     #protoA=arrays(np.float64, (6*(6+1)//2), elements=st.floats(-10, 10)).filter(lambda protoA: valid_covariance_matrix(make_covariance_matrix(protoA))),
-    eigval=arrays(np.float64, (6,), elements=st.floats(1e-6, 1)),
+    eigval=arrays(np.float64, (6,), elements=st.floats(1e-6, 10)),
     vectors=arrays(np.float64, (6,6), elements=st.floats(-10, 10)).filter(valid_QR),
     #stdevs=arrays(np.float64, (6,), elements=st.floats(1e-2, 10)),
     #A=make_covariance_matrix.filter(lambda A: valid_covariance_matrix(A)),
@@ -310,40 +275,39 @@ def test_stackoverflow_like_examples(mu, x, eigval, vectors):
     assert A_c.shape == (q, q)
     dist = multivariate_normal(mean=mu_c, cov=A_c)
     print("truth:", mu_c, A_c)
+    pdf_part = multivariate_normal(mean=mu2, cov=s22).pdf(x2)
 
     # Check (assumes q = 2)
     def pdf(y, x):
         return dist0.pdf(np.concatenate(([x, y], x2)))
 
     p1 = dblquad(pdf, -np.inf, x[0], -np.inf, x[1])[0]  # joint probability
-    p2 = dblquad(pdf, -np.inf, np.inf, -np.inf, np.inf)[0]  # marginal probability
+    #p2 = dblquad(pdf, -np.inf, np.inf, -np.inf, np.inf)[0]  # marginal probability
 
-    if p1 < 1e-6 and p2 < 1e-6:
-        newtol = max(1e-14, max(p1, p2) * 1e-4)
-        p1 = dblquad(pdf, -np.inf, x[0], -np.inf, x[1], epsabs=newtol)[0]  # joint probability
-        p2 = dblquad(pdf, -np.inf, np.inf, -np.inf, np.inf, epsabs=newtol)[0]  # marginal probability
+    #if p1 < 1e-6 and p2 < 1e-6:
+    #    newtol = max(1e-14, max(p1, p2) * 1e-4)
+    #    p1 = dblquad(pdf, -np.inf, x[0], -np.inf, x[1], epsabs=newtol)[0]  # joint probability
+    #    p2 = dblquad(pdf, -np.inf, np.inf, -np.inf, np.inf, epsabs=newtol)[0]  # marginal probability#
 
-    if p1 < 1e-11 and p2 < 1e-11:
-        return
+    #if p1 < 1e-11 and p2 < 1e-11:
+    #    return
 
-    print("p1:", p1, "p2:", p2)
+    print("p1:", p1) #, "p2:", p2)
     # These should match (approximately)
-    assert_allclose(dist.cdf(x1), p1/p2, atol=atol, rtol=1e-2)
+    assert_allclose(dist.cdf(x1) * pdf_part, p1, atol=atol, rtol=1e-2)
     #assert_allclose(dist.cdf(x1), 0.25772255281364065)
     #assert_allclose(p1/p2, 0.25772256555864476)
 
     c1 = ggmm.pdfcdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]), mean=mu, cov=A)
     #assert_allclose(mu_c, conditional_mean)
     #assert_allclose(A_c, conditional_cov)
-    assert_allclose(dist.cdf(x1), c1, atol=atol)
+    assert_allclose(dist.cdf(x1) * pdf_part, c1, atol=atol)
 
     g = ggmm.Gaussian(mean=mu, cov=A)
     c2 = g.pdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]))
-    assert_allclose(dist.cdf(x1), c2, atol=atol)
+    assert_allclose(dist.cdf(x1) * pdf_part, c2, atol=atol)
 
 def test_trivial_example():
-    rng = np.random.RandomState(123)
-
     x = np.zeros((1, 1))
     g = ggmm.Gaussian(mean=np.zeros(1), cov=np.eye(1))
     assert_allclose(norm(0, 1).pdf(x), g.pdf(x, np.array([True])))
@@ -366,8 +330,9 @@ def random_covariance_matrix(dim, seed):
 def mean_and_cov(draw):
     dim = draw(st.integers(min_value=1, max_value=10))  # Arbitrary dimensionality
     mu = draw(arrays(np.float64, (dim,), elements=st.floats(-10, 10)))  # Mean vector
-    seed = draw(st.integers(min_value=1, max_value=100))
-    cov = random_covariance_matrix(dim, seed)  # Covariance matrix
+    eigval = draw(arrays(np.float64, (dim,), elements=st.floats(1e-6, 10)))
+    vectors = draw(arrays(np.float64, (dim,dim), elements=st.floats(-10, 10)).filter(valid_QR))
+    cov = make_covariance_matrix_via_QR(eigval, vectors)
     return dim, mu, cov
 
 
@@ -375,6 +340,8 @@ def mean_and_cov(draw):
 def test_single(mean_cov):
     # a ggmm with one component must behave the same as a single gaussian
     ndim, mu, cov = mean_cov
+    if not valid_covariance_matrix(cov):
+        return
     assert mu.shape == (ndim,), (mu, mu.shape, ndim)
     assert cov.shape == (ndim,ndim), (cov, cov.shape, ndim)
     
@@ -407,36 +374,26 @@ def mean_and_diag_stdevs2(draw):
 #).via('discovered failure')
 def test_single_with_UL(mean_cov=(2, np.zeros(2), np.ones(2))):
     ndim, mu, stdevs = mean_cov
-    cov = np.diag(stdevs)
+    cov = np.diag(stdevs**2)
     assert mu.shape == (ndim,), (mu, mu.shape, ndim)
     assert cov.shape == (ndim,ndim), (cov, cov.shape, ndim)
 
     # a ggmm with one component must behave the same as a single gaussian
+    print("inputs:", mu, stdevs, cov)
     rv = ggmm.Gaussian(mu, cov)
     rv_truth = multivariate_normal(mu[1:], np.diag(stdevs[1:]))
-    #rv_truth = multivariate_normal(mu[1:], np.diag(stdevs[1:]))
 
     #xi = np.arange(ndim).reshape((1, -1)) * np.ones((2, 1))
     xi = np.zeros((2, ndim))
-    # set high upper limit
+    # set high/low upper limit
     xi[0,0] = 1e200
     xi[1,0] = -1e200
     mask = np.ones(ndim, dtype=bool)
     mask[0] = False
     pa = rv.pdf(xi, mask)
-    #pa_expected = np.array([[1,0]]) * rv_truth.pdf(xi[:,mask])
-    pa_expected = rv_truth.pdf(xi[:,mask])
+    pa_expected = np.array([1, 0]) * rv_truth.pdf(xi[:,mask])
+    # pa_expected = rv_truth.pdf(xi[:,mask])
     print("for expectation:", xi[:,mask], mu[1:], np.diag(stdevs[1:]), pa_expected)
     #print("Expected:", pa_expected)
     # pa_expected = 1 * rv_truth.pdf(xi)
     assert_allclose(pa, pa_expected)
-"""
-    # set very low upper limit
-    xi[0] = -1e200
-    pb = rv.pdf(xi, mask)
-    pb_expected = 0 * rv_truth.pdf(xi[:,1:])
-    assert np.allclose(pb, pa_expected)
-"""
-
-
-
