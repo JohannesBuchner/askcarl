@@ -357,31 +357,37 @@ def test_single(mean_cov):
 def mean_and_diag_stdevs2(draw):
     # at least 2 dimensions
     dim = draw(st.integers(min_value=2, max_value=10))
-    mu = draw(arrays(np.float64, (dim,), elements=st.floats(-10, 10)))  # Mean vector
-    seed = draw(st.integers(min_value=1, max_value=100))
-    rng = np.random.RandomState(seed)
-    stdevs = 1. / rng.uniform(size=dim)
+    mu = draw(arrays(np.float64, (dim,), elements=st.floats(-1e6, 1e6)))  # Mean vector
+    stdevs = draw(arrays(np.float64, (dim,), elements=st.floats(1e-6, 1e6)))
     return dim, mu, stdevs
 
-#@given(mean_and_diag_stdevs2())
-#@example(
-#    mean_cov=(2, np.array([0., 0.]), np.array([1.  , 1.])),
-#).via('discovered failure')
-#@example(
-#    mean_cov=(3,
-#     np.array([0., 0., 0.]),
-#     np.array([2.39795500e+00, 1.38826322e+00, 8.74318336e+03])),  # or any other generated value
-#).via('discovered failure')
-def test_single_with_UL(mean_cov=(2, np.zeros(2), np.ones(2))):
-    ndim, mu, stdevs = mean_cov
+@given(mean_and_diag_stdevs2())
+@example(
+    mean_and_cov=(2, array([0., 0.]), array([1., 1.])),
+).via('discovered failure')
+@example(
+    mean_and_cov=(2, array([0., 0.]), array([1., 2.])),
+).via('discovered failure')
+@example(
+    mean_and_cov=(2, array([0., 0.]), array([2., 2.])),
+).via('discovered failure')
+@example(
+    mean_and_cov=(3,
+     array([0., 0., 0.]),
+     array([1.0000e+00, 6.7109e+04, 1.0000e+00])),
+).via('discovered failure')
+def test_single_with_UL(mean_and_cov):
+    ndim, mu, stdevs = mean_and_cov
     cov = np.diag(stdevs**2)
     assert mu.shape == (ndim,), (mu, mu.shape, ndim)
     assert cov.shape == (ndim,ndim), (cov, cov.shape, ndim)
+    if not valid_covariance_matrix(cov):
+        return
 
     # a ggmm with one component must behave the same as a single gaussian
     print("inputs:", mu, stdevs, cov)
     rv = ggmm.Gaussian(mu, cov)
-    rv_truth = multivariate_normal(mu[1:], np.diag(stdevs[1:]))
+    rv_truth = multivariate_normal(mu[1:], np.diag(stdevs[1:]**2))
 
     #xi = np.arange(ndim).reshape((1, -1)) * np.ones((2, 1))
     xi = np.zeros((2, ndim))
@@ -393,7 +399,7 @@ def test_single_with_UL(mean_cov=(2, np.zeros(2), np.ones(2))):
     pa = rv.pdf(xi, mask)
     pa_expected = np.array([1, 0]) * rv_truth.pdf(xi[:,mask])
     # pa_expected = rv_truth.pdf(xi[:,mask])
-    print("for expectation:", xi[:,mask], mu[1:], np.diag(stdevs[1:]), pa_expected)
+    print("for expectation:", xi[0,mask], mu[1:], stdevs[1:], pa, pa_expected)
     #print("Expected:", pa_expected)
     # pa_expected = 1 * rv_truth.pdf(xi)
     assert_allclose(pa, pa_expected)

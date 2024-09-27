@@ -179,6 +179,7 @@ class Gaussian:
                 pdf_value = 1
             else:
                 pdf_value = multivariate_normal(mu_exact, cov_exact).pdf(x_exact)
+            print(" --", pdf_value, dist_conditional.cdf(x_upper - conditional_mean))
             cdf_value = pdf_value * dist_conditional.cdf(x_upper - conditional_mean)
         # print("result:", cdf_value)
         
