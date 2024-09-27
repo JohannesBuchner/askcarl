@@ -359,25 +359,16 @@ def mean_and_diag_stdevs2(draw):
     dim = draw(st.integers(min_value=2, max_value=10))
     mu = draw(arrays(np.float64, (dim,), elements=st.floats(-1e6, 1e6)))  # Mean vector
     stdevs = draw(arrays(np.float64, (dim,), elements=st.floats(1e-6, 1e6)))
-    return dim, mu, stdevs
+    x = draw(arrays(np.float64, (dim,), elements=st.floats(-1e6, 1e6)))
+    i = draw(st.integers(min_value=0, max_value=dim - 1))
+    return dim, mu, stdevs, x, i
 
 @given(mean_and_diag_stdevs2())
 @example(
-    mean_and_cov=(2, array([0., 0.]), array([1., 1.])),
-).via('discovered failure')
-@example(
-    mean_and_cov=(2, array([0., 0.]), array([1., 2.])),
-).via('discovered failure')
-@example(
-    mean_and_cov=(2, array([0., 0.]), array([2., 2.])),
-).via('discovered failure')
-@example(
-    mean_and_cov=(3,
-     array([0., 0., 0.]),
-     array([1.0000e+00, 6.7109e+04, 1.0000e+00])),
+    mean_and_cov=(2, array([1., 0.]), array([1., 1.]), array([0., 0.]), 1),
 ).via('discovered failure')
 def test_single_with_UL(mean_and_cov):
-    ndim, mu, stdevs = mean_and_cov
+    ndim, mu, stdevs, x, i = mean_and_cov
     cov = np.diag(stdevs**2)
     assert mu.shape == (ndim,), (mu, mu.shape, ndim)
     assert cov.shape == (ndim,ndim), (cov, cov.shape, ndim)
@@ -387,19 +378,20 @@ def test_single_with_UL(mean_and_cov):
     # a ggmm with one component must behave the same as a single gaussian
     print("inputs:", mu, stdevs, cov)
     rv = ggmm.Gaussian(mu, cov)
-    rv_truth = multivariate_normal(mu[1:], np.diag(stdevs[1:]**2))
 
-    #xi = np.arange(ndim).reshape((1, -1)) * np.ones((2, 1))
-    xi = np.zeros((2, ndim))
-    # set high/low upper limit
-    xi[0,0] = 1e200
-    xi[1,0] = -1e200
     mask = np.ones(ndim, dtype=bool)
-    mask[0] = False
+    mask[i] = False
+    rv_truth = multivariate_normal(mu[mask], np.diag(stdevs[mask]**2))
+
+    xi = np.array([x, x])
+    assert 0 <= i < ndim
+    # set high/low upper limit
+    xi[0,i] = 1e200
+    xi[1,i] = -1e200
     pa = rv.pdf(xi, mask)
     pa_expected = np.array([1, 0]) * rv_truth.pdf(xi[:,mask])
     # pa_expected = rv_truth.pdf(xi[:,mask])
-    print("for expectation:", xi[0,mask], mu[1:], stdevs[1:], pa, pa_expected)
+    print("for expectation:", xi[0,mask], mu[mask], stdevs[mask], pa, pa_expected)
     #print("Expected:", pa_expected)
     # pa_expected = 1 * rv_truth.pdf(xi)
     assert_allclose(pa, pa_expected)
