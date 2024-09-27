@@ -1,6 +1,6 @@
 import numpy as np
 from numpy import array
-from scipy.stats import norm, multivariate_normal, wishart
+from scipy.stats import norm, multivariate_normal
 from scipy.integrate import dblquad
 from numpy.testing import assert_allclose
 from hypothesis import given, strategies as st, example, settings
@@ -73,44 +73,8 @@ def test_stackoverflow_example():
     assert_allclose(dist.cdf(x1) * pdf_part, c1, atol=1e-6)
 
     g = ggmm.Gaussian(mean=mu, cov=A)
-    c2 = g.pdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]))
+    c2 = g.conditional_pdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]))
     assert_allclose(dist.cdf(x1) * pdf_part, c2, atol=1e-6)
-
-#@st.composite
-#def diagonal_cov(draw, stdevs=arrays(np.float64, (6,), elements=st.floats(1e-6, 10))):
-#    return np.diag(draw(stdevs)**2)
-# Strategy to generate arbitrary dimensionality mean and covariance
-def make_covariance_matrix1(protoA, targetprod=1e-10, eigvalmin = 1e-10):
-    # protoA has n * (n + 1) / 2 entries
-    #print("from", protoA)
-    k = len(protoA)
-    ndim = round(np.sqrt(8 * k + 1) / 2 - 1 / 2)
-    assert len(protoA) == ndim * (ndim + 1) // 2
-    cov = np.zeros((ndim, ndim)) * np.nan
-    k = 0
-    for i in range(ndim):
-        for j in range(i, ndim):
-            cov[j,i] = cov[i,j] = protoA[k]
-            k += 1
-        cov[i,i] = cov[i,i]
-    cov = cov * cov.T
-    assert np.isfinite(cov).all()
-
-    eigval, eigvec = np.linalg.eigh(cov)
-    # w, v = eigval, eigvec
-    eigval[eigval < eigvalmin] = eigvalmin
-    a = np.dot(eigvec, np.diag(1. / np.sqrt(eigval)))
-
-    #mask = eigval < 1.e-10
-    #if np.any(mask):
-    #    nzprod = np.product(eigval[~mask])  # product of nonzero eigenvalues
-    #    nzeros = mask.sum()  # number of zero eigenvalues
-    #    eigval[mask] = (targetprod / nzprod) ** (1. / nzeros)  # adjust zero eigvals
-    
-    #a = np.dot(np.dot(eigvec, np.diag(eigval)), np.linalg.inv(eigvec))  # re-form cov
-    #assert np.isfinite(a).all()
-
-    return a
 
 def valid_QR(vectors):
     q, r = np.linalg.qr(vectors)
@@ -122,19 +86,12 @@ def make_covariance_matrix_via_QR(normalisations, vectors):
     cov = orthogonal_vectors @ np.diag(normalisations) @ orthogonal_vectors.T
     return cov
 
-def test_covariance_making():
-    ndim = 6
-    vectors = np.random.normal(size=(ndim, ndim))
-    normalisations = 1. / np.random.uniform(size=ndim)
-    cov = make_covariance_matrix_via_QR(normalisations, vectors)
-    assert valid_covariance_matrix(cov)
-
-def valid_covariance_matrix(A):
+def valid_covariance_matrix(A, min_std=1e-6):
     if not np.isfinite(A).all():
         return False
-    if not np.std(A) > 1e-6:
-        return False
-    if (np.diag(A)<=1e-6).any():
+    #if not np.std(A) > min_std:
+    #    return False
+    if (np.diag(A) <= min_std).any():
         return False
 
     try:
@@ -153,15 +110,8 @@ def valid_covariance_matrix(A):
 @given(
     mu=arrays(np.float64, (6,), elements=st.floats(-10, 10)),
     x=arrays(np.float64, (6,), elements=st.floats(-10, 10)),
-    #protoA=arrays(np.float64, (6*(6+1)//2), elements=st.floats(-10, 10)).filter(lambda protoA: valid_covariance_matrix(make_covariance_matrix(protoA))),
     eigval=arrays(np.float64, (6,), elements=st.floats(1e-6, 10)),
     vectors=arrays(np.float64, (6,6), elements=st.floats(-10, 10)).filter(valid_QR),
-    #stdevs=arrays(np.float64, (6,), elements=st.floats(1e-2, 10)),
-    #A=make_covariance_matrix.filter(lambda A: valid_covariance_matrix(A)),
-    #arrays(np.float64, (6*(6+1)//2), elements=st.floats(-10, 10))
-    #st.one_of(diagonal_cov,
-    #    arrays(np.float64, (6,6), elements=st.floats(-10, 10)).filter(
-    #    lambda A: np.std(A)>1e-6 and not (A==0).all() and not (np.diag(A)==0).any()))
 )
 @example(
     mu=array([ 0.5    , -9.     , -2.     ,  0.99999,  0.99999,  0.99999]),
@@ -232,20 +182,13 @@ def test_stackoverflow_like_examples(mu, x, eigval, vectors):
     print("atol:", atol)
     if not valid_covariance_matrix(A):
         return
-    #atol = max(stdevs) * 1e-4 + 1e-6
-    #A = np.diag(stdevs**2)
-    #rng = np.random.default_rng(seed)
-
     n = 6  # dimensionality  
     qc = 4  # number of given coordinates
     q = n - qc  # number of other coordinates (must be 2 if you want check to work)
-    #x = rng.random(n)  # generate values for all axes
     # the first q are the "other" coordinates for which you want the CDF
     # the rest are "given"
 
-    #A = rng.random(size=(n, n))  # generate covariance matrix 
     A = A + A.T + np.eye(n)*n
-    # mu = rng.random(n)  # generate mean
     dist0 = multivariate_normal(mean=mu, cov=A)
 
     # Generate MVN conditioned on x[q:] 
@@ -282,47 +225,27 @@ def test_stackoverflow_like_examples(mu, x, eigval, vectors):
         return dist0.pdf(np.concatenate(([x, y], x2)))
 
     p1 = dblquad(pdf, -np.inf, x[0], -np.inf, x[1])[0]  # joint probability
-    #p2 = dblquad(pdf, -np.inf, np.inf, -np.inf, np.inf)[0]  # marginal probability
-
-    #if p1 < 1e-6 and p2 < 1e-6:
-    #    newtol = max(1e-14, max(p1, p2) * 1e-4)
-    #    p1 = dblquad(pdf, -np.inf, x[0], -np.inf, x[1], epsabs=newtol)[0]  # joint probability
-    #    p2 = dblquad(pdf, -np.inf, np.inf, -np.inf, np.inf, epsabs=newtol)[0]  # marginal probability#
-
-    #if p1 < 1e-11 and p2 < 1e-11:
-    #    return
 
     print("p1:", p1) #, "p2:", p2)
     # These should match (approximately)
     assert_allclose(dist.cdf(x1) * pdf_part, p1, atol=atol, rtol=1e-2)
-    #assert_allclose(dist.cdf(x1), 0.25772255281364065)
-    #assert_allclose(p1/p2, 0.25772256555864476)
 
     c1 = ggmm.pdfcdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]), mean=mu, cov=A)
-    #assert_allclose(mu_c, conditional_mean)
-    #assert_allclose(A_c, conditional_cov)
     assert_allclose(dist.cdf(x1) * pdf_part, c1, atol=atol)
 
     g = ggmm.Gaussian(mean=mu, cov=A)
-    c2 = g.pdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]))
+    c2 = g.conditional_pdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]))
     assert_allclose(dist.cdf(x1) * pdf_part, c2, atol=atol)
 
 def test_trivial_example():
     x = np.zeros((1, 1))
     g = ggmm.Gaussian(mean=np.zeros(1), cov=np.eye(1))
-    assert_allclose(norm(0, 1).pdf(x), g.pdf(x, np.array([True])))
+    assert_allclose(norm(0, 1).pdf(x), g.conditional_pdf(x, np.array([True])))
 
     print("zero")
     x = np.zeros((1, 1))
     g = ggmm.Gaussian(mean=np.zeros(1), cov=np.eye(1))
-    assert_allclose(norm(0, 1).cdf(x), g.pdf(x, np.array([False])))
-
-# Helper strategy to generate positive semi-definite covariance matrices
-def random_covariance_matrix(dim, seed):
-    """Returns a strategy to generate a positive semi-definite covariance matrix of shape (dim, dim)."""
-    df = dim  # degrees of freedom (at least dim for valid positive definite matrix)
-    scale = np.eye(dim)  # scale matrix, here an identity matrix
-    return wishart.rvs(df=df, scale=scale, random_state=np.random.RandomState(seed)).reshape((dim, dim))
+    assert_allclose(norm(0, 1).cdf(x), g.conditional_pdf(x, np.array([False])))
 
 
 # Strategy to generate arbitrary dimensionality mean and covariance
@@ -351,7 +274,7 @@ def test_single(mean_cov):
     rv_truth = multivariate_normal(mu, cov)
 
     xi = np.random.randn(1, len(mu))  # A random vector of same dimensionality as `mu`
-    assert np.allclose(rv.pdf(xi), rv_truth.pdf(xi[0]))
+    assert np.allclose(rv.conditional_pdf(xi), rv_truth.pdf(xi[0]))
 
 @st.composite
 def mean_and_diag_stdevs2(draw):
@@ -388,7 +311,7 @@ def test_single_with_UL(mean_and_cov):
     # set high/low upper limit
     xi[0,i] = 1e200
     xi[1,i] = -1e200
-    pa = rv.pdf(xi, mask)
+    pa = rv.conditional_pdf(xi, mask)
     pa_expected = np.array([1, 0]) * rv_truth.pdf(xi[:,mask])
     # pa_expected = rv_truth.pdf(xi[:,mask])
     print("for expectation:", xi[0,mask], mu[mask], stdevs[mask], pa, pa_expected)

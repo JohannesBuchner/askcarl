@@ -118,7 +118,7 @@ class Gaussian:
 
         return self.rvs[key]
 
-    def pdf(self, x, mask=Ellipsis):
+    def conditional_pdf(self, x, mask=Ellipsis):
         """
         Computes the mixed PDF and CDF for a multivariate Gaussian distribution.
 
@@ -164,24 +164,16 @@ class Gaussian:
 
         assert x_upper.shape == ((len(x), n_upper)), (x_upper.shape, ((len(x), n_upper)))
         # Compute the CDF for the upper bounds
-        # print("shift:", x_upper, conditional_mean, len(exact_idx), dist_conditional is not None)
         if n_upper == 0:
             # trivial case: PDF only
-            # print("trivial case: PDF only", conditional_mean, dist_conditional)
             cdf_value = multivariate_normal(np.zeros(self.ndim), self.cov).pdf(x - self.mean.reshape((1, -1)))
-        #elif n_exact == 0:
-        #    # trivial case: CDF only
-        #    print("trivial case: CDF only", conditional_mean, dist_conditional.mean, dist_conditional.cov)
-        #    cdf_value = multivariate_normal(np.zeros(self.ndim), self.cov).cdf(x - self.mean.reshape((1, -1)))
         else:
-            # print("conditional CDF case", dist_conditional.mean, dist_conditional.cov, x_upper - conditional_mean)
             if n_exact == 0:
+                # trivial case: CDF only
                 pdf_value = 1
             else:
                 pdf_value = multivariate_normal(mu_exact, cov_exact).pdf(x_exact)
-            print(" --", pdf_value, dist_conditional.cdf(x_upper - conditional_mean))
             cdf_value = pdf_value * dist_conditional.cdf(x_upper - conditional_mean)
-        # print("result:", cdf_value)
         
         return cdf_value
 
