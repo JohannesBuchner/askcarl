@@ -1,4 +1,4 @@
-Welcome to GGMM's documentation!
+Welcome to askcarl's documentation!
 ==========================================
 
 .. toctree::

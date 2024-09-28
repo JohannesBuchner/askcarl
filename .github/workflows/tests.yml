@@ -33,13 +33,13 @@ jobs:
       run: python -m pip install .
 
     - name: Lint with flake8
-      run: flake8 ggmm/*.py
+      run: flake8 askcarl/*.py
 
     - name: Check code style
-      run: pycodestyle ggmm/*.py
+      run: pycodestyle askcarl/*.py
 
     - name: Check doc style
-      run: pydocstyle ggmm/*.py
+      run: pydocstyle askcarl/*.py
     
     - name: Test package
       run: python3 -m coverage run example/iris.py

@@ -25,7 +25,7 @@ test_requirements = ['pytest>=3', ]
 
 setup(
     keywords='Generalized Gaussian Mixture Model',
-    name='ggmm',
+    name='askcarl',
     author="Johannes Buchner",
     author_email='johannes.buchner.acad@gmx.com',
     python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, !=3.6.*, !=3.7.*',
@@ -50,6 +50,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     extras_require=dict(plot=['matplotlib', 'scipy']),
-    url='https://github.com/JohannesBuchner/GGMM',
+    url='https://github.com/JohannesBuchner/askcarl',
     version='0.1.0',
 )

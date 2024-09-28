@@ -1,5 +1,5 @@
 ====
-GGMM
+askcarl
 ====
 
 Gaussian Mixture Model with support for heterogeneous missing and censored (upper limit) data.
@@ -18,7 +18,7 @@ simulation-based inference.
 Missing data can occur when no measurement of a given feature was taken.
 In that case, the probability of a GMM density can be obtained 
 by marginalisation.
-This is implemented in ggmm analytically.
+This is implemented in askcarl analytically.
 This is different to `pygmmis <https://github.com/pmelchior/pygmmis>`,
 which approximates this situation with large measurement uncertainties.
 This is different to `<https://github.com/avati/gmm-mcar>`,
@@ -28,13 +28,13 @@ Upper limits can occur when the measurement of a given feature was not
 sensitive enough.
 In that case, the probability of a GMM density can be obtained by
 marginalisation up to the upper limit.
-This is implemented in ggmm analytically, and each data point can have
+This is implemented in askcarl analytically, and each data point can have
 its own individual upper limit (heterogeneous).
 This is different to typical censored GMMs, which assume a common 
 upper limit for all data (homogeneous) (`see here for example <https://github.com/tranbahien/Truncated-Censored-EM>`).
 
-For these cases, GGMM implements evaluating the PDF and log-PDF of a mixture.
-GGMM does not implement finding the mixture parameters.
+For these cases, askcarl implements evaluating the PDF and log-PDF of a mixture.
+askcarl does not implement finding the mixture parameters.
 
 Example
 ---------
@@ -53,9 +53,9 @@ This gives us a mixture with three Gaussians (shown as ellipses):
 
 .. image:: iris.png
 
-Lets import the learned mixture into ggmm::
+Lets import the learned mixture into askcarl::
 
-        mix = ggmm.GaussianMixture.from_sklearn(gmm)
+        mix = askcarl.GaussianMixture.from_sklearn(gmm)
 
 Now, we compute the probability of a few points:
 
@@ -107,20 +107,20 @@ handled without needing to modify the original mixture.
 Why
 ---
 
-GGMM can be used for likelihood-based inference (LBI) with
+askcarl can be used for likelihood-based inference (LBI) with
 simulation-based inference (SBI) generating samples, a EM algorithm
 identifying the GMM parameters, but applied to data with missing data or upper limits.
 
 This is a common case for photometric flux measurements in astronomy.
 
-.. image:: https://img.shields.io/pypi/v/ggmm.svg
-        :target: https://pypi.python.org/pypi/ggmm
+.. image:: https://img.shields.io/pypi/v/askcarl.svg
+        :target: https://pypi.python.org/pypi/askcarl
 
-.. image:: https://github.com/JohannesBuchner/ggmm/actions/workflows/tests.yml/badge.svg
-        :target: https://github.com/JohannesBuchner/ggmm/actions/workflows/tests.yml
+.. image:: https://github.com/JohannesBuchner/askcarl/actions/workflows/tests.yml/badge.svg
+        :target: https://github.com/JohannesBuchner/askcarl/actions/workflows/tests.yml
 
 .. image:: https://img.shields.io/badge/docs-published-ok.svg
-        :target: https://johannesbuchner.github.io/ggmm/
+        :target: https://johannesbuchner.github.io/askcarl/
         :alt: Documentation Status
 
 Usage
@@ -128,7 +128,7 @@ Usage
 
 Read the full documentation at:
 
-https://johannesbuchner.github.io/ggmm/
+https://johannesbuchner.github.io/askcarl/
 
 
 Licence

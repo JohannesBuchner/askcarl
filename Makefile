@@ -71,16 +71,16 @@ test-all: ## run tests on every Python version with tox
 	tox
 
 coverage: ## check code coverage quickly with the default Python
-	coverage run --source ggmm -m pytest
+	coverage run --source askcarl -m pytest
 	coverage report -m
 	coverage html
 	$(BROWSER) htmlcov/index.html
 
 docs: ## generate Sphinx HTML documentation, including API docs
-	rm -f docs/ggmm.rst
+	rm -f docs/askcarl.rst
 	rm -f docs/modules.rst
 	#nbstripout docs/*.ipynb
-	sphinx-apidoc -H API -o docs/ ggmm
+	sphinx-apidoc -H API -o docs/ askcarl
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 	$(BROWSER) docs/build/html/index.html

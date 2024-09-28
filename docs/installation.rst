@@ -9,13 +9,13 @@ Installation
 Stable release
 --------------
 
-To install ggmm, run this command in your terminal:
+To install askcarl, run this command in your terminal:
 
 .. code-block:: console
 
-    $ python -m pip install ggmm
+    $ python -m pip install askcarl
 
-This is the preferred method to install ggmm, as it will always install the most recent stable release.
+This is the preferred method to install askcarl, as it will always install the most recent stable release.
 
 If you don't have `pip`_ installed, this `Python installation guide`_ can guide
 you through the process.
@@ -28,19 +28,19 @@ you through the process.
 From sources
 ------------
 
-The sources for ggmm can be downloaded from the `Github repo`_.
+The sources for askcarl can be downloaded from the `Github repo`_.
 
 You can either clone the public repository:
 
 .. code-block:: console
 
-    $ git clone git://github.com/JohannesBuchner/ggmm
+    $ git clone git://github.com/JohannesBuchner/askcarl
 
 Or download the `tarball`_:
 
 .. code-block:: console
 
-    $ curl -OJL https://github.com/JohannesBuchner/ggmm/tarball/master
+    $ curl -OJL https://github.com/JohannesBuchner/askcarl/tarball/master
 
 Once you have a copy of the source, you can install it with:
 
@@ -49,5 +49,5 @@ Once you have a copy of the source, you can install it with:
     $ python setup.py install
 
 
-.. _Github repo: https://github.com/JohannesBuchner/ggmm
-.. _tarball: https://github.com/JohannesBuchner/ggmm/tarball/master
+.. _Github repo: https://github.com/JohannesBuchner/askcarl
+.. _tarball: https://github.com/JohannesBuchner/askcarl/tarball/master

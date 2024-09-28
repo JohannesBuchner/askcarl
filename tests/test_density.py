@@ -9,7 +9,7 @@ from hypothesis.extra.numpy import arrays
 import pypmc.density.mixture
 import sklearn.mixture
 
-import ggmm
+import askcarl
 
 
 def test_stackoverflow_example():
@@ -70,13 +70,13 @@ def test_stackoverflow_example():
     #assert_allclose(dist.cdf(x1), 0.25772255281364065)
     #assert_allclose(p1/p2, 0.25772256555864476)
 
-    c1 = ggmm.pdfcdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]), mean=mu, cov=A)
+    c1 = askcarl.pdfcdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]), mean=mu, cov=A)
     #assert_allclose(mu_c, conditional_mean)
     #assert_allclose(A_c, conditional_cov)
     print("truth eval:", x1, dist.mean, dist.cov, dist.cdf(x1), c1)
     assert_allclose(dist.cdf(x1) * pdf_part, c1, atol=1e-6)
 
-    g = ggmm.Gaussian(mean=mu, cov=A)
+    g = askcarl.Gaussian(mean=mu, cov=A)
     c2 = g.conditional_pdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]))
     assert_allclose(dist.cdf(x1) * pdf_part, c2, atol=1e-6)
 
@@ -237,21 +237,21 @@ def test_stackoverflow_like_examples(mu, x, eigval, vectors):
     # These should match (approximately)
     assert_allclose(dist.cdf(x1) * pdf_part, p1, atol=atol, rtol=1e-2)
 
-    c1 = ggmm.pdfcdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]), mean=mu, cov=A)
+    c1 = askcarl.pdfcdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]), mean=mu, cov=A)
     assert_allclose(dist.cdf(x1) * pdf_part, c1, atol=atol)
 
-    g = ggmm.Gaussian(mean=mu, cov=A)
+    g = askcarl.Gaussian(mean=mu, cov=A)
     c2 = g.conditional_pdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]))
     assert_allclose(dist.cdf(x1) * pdf_part, c2, atol=atol)
 
 def test_trivial_example():
     x = np.zeros((1, 1))
-    g = ggmm.Gaussian(mean=np.zeros(1), cov=np.eye(1))
+    g = askcarl.Gaussian(mean=np.zeros(1), cov=np.eye(1))
     assert_allclose(norm(0, 1).pdf(x), g.conditional_pdf(x, np.array([True])))
 
     print("zero")
     x = np.zeros((1, 1))
-    g = ggmm.Gaussian(mean=np.zeros(1), cov=np.eye(1))
+    g = askcarl.Gaussian(mean=np.zeros(1), cov=np.eye(1))
     assert_allclose(norm(0, 1).cdf(x), g.conditional_pdf(x, np.array([False])))
 
 
@@ -259,9 +259,9 @@ def test_trivial_mixture():
     x = np.zeros((1, 1))
     mask = np.ones((1, 1), dtype=bool)
     p_truth = norm(0, 1).pdf(x)[0]
-    g = ggmm.Gaussian(mean=np.zeros(1), cov=np.eye(1))
+    g = askcarl.Gaussian(mean=np.zeros(1), cov=np.eye(1))
     assert_allclose(p_truth, g.pdf(x, mask))
-    mix = ggmm.GaussianMixture(means=[np.zeros(1)], covs=[np.eye(1)], weights=[1.0])
+    mix = askcarl.GaussianMixture(means=[np.zeros(1)], covs=[np.eye(1)], weights=[1.0])
     assert_allclose(p_truth, mix.pdf(x, mask))
 
 # Strategy to generate arbitrary dimensionality mean and covariance
@@ -277,16 +277,16 @@ def mean_and_cov(draw):
 
 @given(mean_and_cov())
 def test_single(mean_cov):
-    # a ggmm with one component must behave the same as a single gaussian
+    # a askcarl with one component must behave the same as a single gaussian
     ndim, mu, cov = mean_cov
     if not valid_covariance_matrix(cov):
         return
     assert mu.shape == (ndim,), (mu, mu.shape, ndim)
     assert cov.shape == (ndim,ndim), (cov, cov.shape, ndim)
     
-    # a ggmm with one component must behave the same as a single gaussian
+    # a askcarl with one component must behave the same as a single gaussian
     
-    rv = ggmm.Gaussian(mu, cov)
+    rv = askcarl.Gaussian(mu, cov)
     rv_truth = multivariate_normal(mu, cov)
 
     xi = np.random.randn(1, len(mu))  # A random vector of same dimensionality as `mu`
@@ -326,9 +326,9 @@ def test_single_with_UL(mean_and_cov):
     if not valid_covariance_matrix(cov):
         return
 
-    # a ggmm with one component must behave the same as a single gaussian
+    # a askcarl with one component must behave the same as a single gaussian
     print("inputs:", mu, stdevs, cov)
-    rv = ggmm.Gaussian(mu, cov)
+    rv = askcarl.Gaussian(mu, cov)
 
     mask = np.ones(ndim, dtype=bool)
     mask[i] = False
@@ -447,24 +447,24 @@ def test_mixture(mixture):
         return
 
     print("inputs:", ndim, ncomponents, means, covs, weights, x, mask)
-    gmm = ggmm.GaussianMixture(weights, means, covs)
+    gmm = askcarl.GaussianMixture(weights, means, covs)
     #assert_allclose(gmm.log_weights, np.log(weights))
-    ggmm_p = gmm.pdf(x, mask=mask)
-    ggmm_logp = gmm.logpdf(x, mask=mask)
+    askcarl_p = gmm.pdf(x, mask=mask)
+    askcarl_logp = gmm.logpdf(x, mask=mask)
     gaussians = [multivariate_normal(mean, cov) for mean, cov in zip(means, covs)]
     if len(gaussians) == 1:
         assert_allclose(gmm.log_weights, 0)
         assert_allclose(gmm.components[0].pdf(x, mask), gaussians[0].pdf(x))
         assert_allclose(gmm.components[0].logpdf(x, mask), gaussians[0].logpdf(x))
-        assert_allclose(ggmm_p, gaussians[0].pdf(x))
-        assert_allclose(ggmm_logp, gaussians[0].logpdf(x))
+        assert_allclose(askcarl_p, gaussians[0].pdf(x))
+        assert_allclose(askcarl_logp, gaussians[0].logpdf(x))
 
     target_mixture = pypmc.density.mixture.create_gaussian_mixture(
         means, covs, weights)
     pypmc_logp = np.array([target_mixture.evaluate(xi) for xi in x])
-    assert_allclose(ggmm_p, np.exp(pypmc_logp), atol=1e-300, rtol=1e-4)
-    assert_allclose(ggmm_logp[pypmc_logp>-100000], pypmc_logp[pypmc_logp>-100000], atol=1)
-    assert_allclose(ggmm_logp[ggmm_logp>-100000], ggmm_logp[ggmm_logp>-100000], atol=1)
+    assert_allclose(askcarl_p, np.exp(pypmc_logp), atol=1e-300, rtol=1e-4)
+    assert_allclose(askcarl_logp[pypmc_logp>-100000], pypmc_logp[pypmc_logp>-100000], atol=1)
+    assert_allclose(askcarl_logp[askcarl_logp>-100000], askcarl_logp[askcarl_logp>-100000], atol=1)
 
     precisions = [np.linalg.inv(cov) for cov in covs]
     # compare results of GMM to sklearn
@@ -483,12 +483,12 @@ def test_mixture(mixture):
             axis=1)
     print(sk_logp)
     assert sk_logp.shape == (len(x),), (sk_logp.shape, len(x))
-    print(skgmm.weights_, ggmm_logp, ggmm_p)
+    print(skgmm.weights_, askcarl_logp, askcarl_p)
     sk_p = skgmm.predict_proba(x)
-    assert_allclose(ggmm_logp, sk_logp, atol=1e-2, rtol=1e-3)
+    assert_allclose(askcarl_logp, sk_logp, atol=1e-2, rtol=1e-3)
     #_, sk_logp2 = skgmm._estimate_log_prob_resp(x)
     #assert_allclose(sk_logp2, sk_logp)
-    #assert_allclose(ggmm_p, sk_p, atol=1e-300, rtol=1e-4)
+    #assert_allclose(askcarl_p, sk_p, atol=1e-300, rtol=1e-4)
 
 def test_import():
     a = np.vstack((
@@ -499,21 +499,21 @@ def test_import():
     assert a.shape == (23000, 3), a.shape
     skgmm = sklearn.mixture.GaussianMixture(n_components=3)
     skgmm.fit(a)
-    ggmm_fromsklearn = ggmm.GaussianMixture.from_sklearn(skgmm)
+    askcarl_fromsklearn = askcarl.GaussianMixture.from_sklearn(skgmm)
     
-    means = [g.mean for g in ggmm_fromsklearn.components]
-    covs = [g.cov for g in ggmm_fromsklearn.components]
+    means = [g.mean for g in askcarl_fromsklearn.components]
+    covs = [g.cov for g in askcarl_fromsklearn.components]
     print(means)
     print([np.diag(cov) for cov in covs])
     assert any(np.allclose(mean, 3, atol=0.1) for mean in means)
     assert any(np.allclose(mean, 0, atol=0.1) for mean in means)
     
     target_mixture = pypmc.density.mixture.create_gaussian_mixture(
-        means, covs, ggmm_fromsklearn.weights)
-    ggmm_frompypmc = ggmm.GaussianMixture.from_pypmc(target_mixture)
+        means, covs, askcarl_fromsklearn.weights)
+    askcarl_frompypmc = askcarl.GaussianMixture.from_pypmc(target_mixture)
 
-    means2 = [g.mean for g in ggmm_frompypmc.components]
-    covs2 = [g.cov for g in ggmm_frompypmc.components]
+    means2 = [g.mean for g in askcarl_frompypmc.components]
+    covs2 = [g.cov for g in askcarl_frompypmc.components]
 
     assert_allclose(means2, means)
     assert_allclose(covs2, covs)

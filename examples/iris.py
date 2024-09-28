@@ -4,7 +4,7 @@ import numpy as np
 
 from sklearn import datasets
 from sklearn.mixture import GaussianMixture
-import ggmm
+import askcarl
 
 colors = ["navy", "turquoise", "darkorange"]
 
@@ -63,7 +63,7 @@ axs[1,1].set_xlim(axs[1,1].get_xlim())
 #plt.savefig('iris.png')
 
 print(iris.feature_names)
-mix = ggmm.GaussianMixture.from_sklearn(gmm)
+mix = askcarl.GaussianMixture.from_sklearn(gmm)
 x = np.array([
    [5, 3.5, 1.5],
    [6, 5.0, 5.0],
