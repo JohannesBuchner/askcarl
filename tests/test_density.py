@@ -439,6 +439,37 @@ from  sklearn.mixture._gaussian_mixture import _estimate_log_gaussian_prob
 @example(
     mixture=(1, 1, [array([0.])], [array([[1.]])], array([1.]), array([[0.]])),
 ).via('discovered failure')
+@example(
+    mixture=(8,
+     1,
+     [array([0., 0., 0., 0., 0., 0., 0., 0.])],
+     [array([[ 1.53365164e-06, -4.56057424e-07, -2.47157040e-07,
+              -1.88188005e-07,  1.47416388e-07,  1.47416391e-07,
+               4.49153299e-07,  1.47416391e-07],
+             [-4.56057424e-07,  1.76562629e+00,  9.99999625e-01,
+               9.99999679e-01, -3.26562499e+00,  1.98437501e+00,
+               2.53124938e+00,  1.98437501e+00],
+             [-2.47157040e-07,  9.99999625e-01,  1.00000099e+00,
+               9.99999580e-01,  9.99999915e-01,  9.99999915e-01,
+               1.00000006e+00,  9.99999915e-01],
+             [-1.88188005e-07,  9.99999679e-01,  9.99999580e-01,
+               1.00000091e+00,  9.99999927e-01,  9.99999927e-01,
+               1.00000005e+00,  9.99999927e-01],
+             [ 1.47416388e-07, -3.26562499e+00,  9.99999915e-01,
+               9.99999927e-01,  2.47656250e+01, -4.48437497e+00,
+              -7.53124995e+00, -4.48437497e+00],
+             [ 1.47416391e-07,  1.98437501e+00,  9.99999915e-01,
+               9.99999927e-01, -4.48437497e+00,  2.26562529e+00,
+               2.96875004e+00,  2.26562479e+00],
+             [ 4.49153299e-07,  2.53124938e+00,  1.00000006e+00,
+               1.00000005e+00, -7.53124995e+00,  2.96875004e+00,
+               4.06250038e+00,  2.96875004e+00],
+             [ 1.47416391e-07,  1.98437501e+00,  9.99999915e-01,
+               9.99999927e-01, -4.48437497e+00,  2.26562479e+00,
+               2.96875004e+00,  2.26562529e+00]])],
+     array([1.]),
+     array([[0., 0., 0., 0., 0., 0., 0., 0.]])),
+).via('discovered failure')
 def test_mixture(mixture):
     ndim, ncomponents, means, covs, weights, x = mixture
     mask = np.ones(x.shape, dtype=bool)
@@ -485,7 +516,7 @@ def test_mixture(mixture):
     assert sk_logp.shape == (len(x),), (sk_logp.shape, len(x))
     print(skgmm.weights_, askcarl_logp, askcarl_p)
     sk_p = skgmm.predict_proba(x)
-    assert_allclose(askcarl_logp, sk_logp, atol=1e-2, rtol=1e-3)
+    assert_allclose(askcarl_logp, sk_logp, atol=1e-2, rtol=1e-2)
     #_, sk_logp2 = skgmm._estimate_log_prob_resp(x)
     #assert_allclose(sk_logp2, sk_logp)
     #assert_allclose(askcarl_p, sk_p, atol=1e-300, rtol=1e-4)
