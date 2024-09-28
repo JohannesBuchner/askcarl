@@ -454,8 +454,8 @@ def test_mixture(mixture):
     gaussians = [multivariate_normal(mean, cov) for mean, cov in zip(means, covs)]
     if len(gaussians) == 1:
         assert_allclose(gmm.log_weights, 0)
-        assert_allclose(gmm.members[0].pdf(x, mask), gaussians[0].pdf(x))
-        assert_allclose(gmm.members[0].logpdf(x, mask), gaussians[0].logpdf(x))
+        assert_allclose(gmm.components[0].pdf(x, mask), gaussians[0].pdf(x))
+        assert_allclose(gmm.components[0].logpdf(x, mask), gaussians[0].logpdf(x))
         assert_allclose(ggmm_p, gaussians[0].pdf(x))
         assert_allclose(ggmm_logp, gaussians[0].logpdf(x))
 

@@ -1,10 +1,12 @@
+"""Multivariate Gaussians with support for upper limits and missing data."""
+
 import numpy as np
 from scipy.stats import multivariate_normal
 
 
 def pdfcdf(x, mask, mean, cov):
     """
-    Computes the mixed PDF and CDF for a multivariate Gaussian distribution.
+    Compute the mixed PDF and CDF for a multivariate Gaussian distribution.
 
     Parameters
     -----------
@@ -76,9 +78,11 @@ def pdfcdf(x, mask, mean, cov):
 
 
 class Gaussian:
+    """Multivariate Gaussians with support for upper limits and missing data."""
+
     def __init__(self, mean, cov):
-        """Generalized Gaussian Likelihood.
-    
+        """Initialize.
+
         Parameters
         -----------
         mean: array
@@ -98,13 +102,13 @@ class Gaussian:
 
     def get_conditional_rv(self, mask):
         """Build conditional distribution.
-    
+
         Parameters
         -----------
         mask: array
             A boolean mask, indicating whether the entry
             is a value (True) or a upper bound (False).
-    
+
         Returns
         ----------
         cov_cross: array
@@ -155,7 +159,7 @@ class Gaussian:
 
     def _prepare_conditional_pdf(self, x, mask=Ellipsis):
         """
-        Computes the mixed PDF and CDF for a multivariate Gaussian distribution.
+        Compute the mixed PDF and CDF for a multivariate Gaussian distribution.
 
         Parameters:
         - x: The point (vector) at which to evaluate the probability.
@@ -232,7 +236,7 @@ class Gaussian:
             else:
                 pdf_value = multivariate_normal(mu_exact, cov_exact).pdf(x_exact)
             cdf_value = pdf_value * dist_conditional.cdf(x_upper - conditional_mean)
-        
+
         return cdf_value
 
     def conditional_logpdf(self, x, mask=Ellipsis):
@@ -266,7 +270,7 @@ class Gaussian:
             else:
                 logpdf_value = multivariate_normal(mu_exact, cov_exact).logpdf(x_exact)
             logcdf_value = logpdf_value + dist_conditional.logcdf(x_upper - conditional_mean)
-        
+
         return logcdf_value
 
     def pdf(self, x, mask):
@@ -297,7 +301,6 @@ class Gaussian:
         assert np.isfinite(pdf_values).all(), pdf_values
         return pdf_values
 
-
     def logpdf(self, x, mask):
         """
         Compute conditional log-PDF.
@@ -324,4 +327,3 @@ class Gaussian:
             members = powers == power
             logpdf_values[members] = self.conditional_logpdf(x[members,:], mask[index, :])
         return logpdf_values
-

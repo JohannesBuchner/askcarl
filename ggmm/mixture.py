@@ -1,5 +1,7 @@
+"""Mixture of Gaussians."""
 import numpy as np
 from scipy.special import logsumexp
+
 from .gaussian import Gaussian
 
 
@@ -38,12 +40,12 @@ class GaussianMixture:
     @staticmethod
     def from_pypmc(mix):
         """Initialize from a pypmc Gaussian mixture model (GMM).
-    
+
         Parameters
         -----------
         mix: `pypmc.density.mixture.GaussianMixture`
             Gaussian mixture.
-    
+
         Returns
         ----------
         mix: `GaussianMixture`
@@ -57,12 +59,12 @@ class GaussianMixture:
     @staticmethod
     def from_sklearn(skgmm):
         """Initialize from a scikit-learn Gaussian mixture model (GMM).
-    
+
         Parameters
         -----------
         mix: `sklearn.mixture.GaussianMixture`
             Gaussian mixture.
-    
+
         Returns
         ----------
         mix: `GaussianMixture`
@@ -72,7 +74,7 @@ class GaussianMixture:
             weights=skgmm.weights_,
             means=skgmm.means_,
             covs=skgmm.covariances_)
-    
+
     def pdf(self, x, mask):
         """Compute probability density at x.
 
@@ -113,4 +115,3 @@ class GaussianMixture:
             w + g.logpdf(x, mask)
             for w, g in zip(self.log_weights, self.components)],
             axis=0)
-
