@@ -37,6 +37,18 @@ class GaussianMixture:
 
     @staticmethod
     def from_pypmc(mix):
+        """Initialize from a pypmc Gaussian mixture model (GMM).
+    
+        Parameters
+        -----------
+        mix: `pypmc.density.mixture.GaussianMixture`
+            Gaussian mixture.
+    
+        Returns
+        ----------
+        mix: `GaussianMixture`
+            Generalized Gaussian mixture.
+        """
         return GaussianMixture(
             weights=mix.weights,
             means=[g.mu for g in mix.components],
@@ -44,6 +56,18 @@ class GaussianMixture:
 
     @staticmethod
     def from_sklearn(skgmm):
+        """Initialize from a scikit-learn Gaussian mixture model (GMM).
+    
+        Parameters
+        -----------
+        mix: `sklearn.mixture.GaussianMixture`
+            Gaussian mixture.
+    
+        Returns
+        ----------
+        mix: `GaussianMixture`
+            Generalized Gaussian mixture.
+        """
         return GaussianMixture(
             weights=skgmm.weights_,
             means=skgmm.means_,

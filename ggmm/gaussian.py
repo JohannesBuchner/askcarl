@@ -99,7 +99,6 @@ class Gaussian:
     def get_conditional_rv(self, mask):
         """Build conditional distribution.
     
-    
         Parameters
         -----------
         mask: array
