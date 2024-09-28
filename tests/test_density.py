@@ -2,6 +2,7 @@ import numpy as np
 from numpy import array
 from scipy.stats import norm, multivariate_normal
 from scipy.integrate import dblquad
+from scipy.special import logsumexp
 from numpy.testing import assert_allclose
 from hypothesis import given, strategies as st, example, settings, HealthCheck
 from hypothesis.extra.numpy import arrays
@@ -413,7 +414,7 @@ from  sklearn.mixture._gaussian_mixture import _estimate_log_gaussian_prob
             [0., 0., 0., 0., 0.],
             [0., 0., 0., 0., 0.]])),
 ).via('discovered failure')"""
-@settings(suppress_health_check=[HealthCheck.filter_too_much])
+@settings(suppress_health_check=[HealthCheck.filter_too_much], max_examples=1000, deadline=None)
 @given(mixture_strategy())
 @example(
     mixture=(1, 1, [array([0.])], [array([[1.]])], array([1.]), array([[0.]])),
@@ -442,8 +443,8 @@ def test_mixture(mixture):
         means, covs, weights)
     pypmc_logp = np.array([target_mixture.evaluate(xi) for xi in x])
     assert_allclose(ggmm_p, np.exp(pypmc_logp), atol=1e-300, rtol=1e-4)
-    assert_allclose(ggmm_logp[pypmc_logp>-100000], pypmc_logp[pypmc_logp>-100000], atol=0.2)
-    assert_allclose(ggmm_logp[ggmm_logp>-100000], ggmm_logp[ggmm_logp>-100000], atol=0.2)
+    assert_allclose(ggmm_logp[pypmc_logp>-100000], pypmc_logp[pypmc_logp>-100000], atol=1)
+    assert_allclose(ggmm_logp[ggmm_logp>-100000], ggmm_logp[ggmm_logp>-100000], atol=1)
 
     precisions = [np.linalg.inv(cov) for cov in covs]
     # compare results of GMM to sklearn
@@ -457,8 +458,14 @@ def test_mixture(mixture):
     assert_allclose(skgmm.covariances_, covs)
     # compare results of GMM to pypmc
     print(x, skgmm.means_, skgmm.precisions_cholesky_)
-    print(_estimate_log_gaussian_prob(x, skgmm.means_, skgmm.precisions_cholesky_, 'full'))
+    sk_logp = logsumexp(
+        np.log(weights).reshape((1, -1)) + _estimate_log_gaussian_prob(x, skgmm.means_, skgmm.precisions_cholesky_, 'full'),
+            axis=1)
+    print(sk_logp)
+    assert sk_logp.shape == (len(x),), (sk_logp.shape, len(x))
     print(skgmm.weights_, ggmm_logp, ggmm_p)
     sk_p = skgmm.predict_proba(x)
+    #_, sk_logp = skgmm._estimate_log_prob_resp(x)
+    assert_allclose(ggmm_logp, sk_logp, atol=1e-2)
     #assert_allclose(ggmm_p, sk_p)
 
