@@ -41,7 +41,7 @@ jobs:
       run: pydocstyle askcarl/*.py
 
     - name: Test package
-      run: python3 -m coverage run examples/iris.py
+      run: PYTHONPATH=. python3 -m coverage run examples/iris.py
 
     - name: Test with pytest
       run: PYTHONPATH=. python3 -m coverage run -a -m pytest
