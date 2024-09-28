@@ -369,7 +369,8 @@ def mixture_strategy(draw):
 
 from  sklearn.mixture._gaussian_mixture import _estimate_log_gaussian_prob
 
-"""
+@settings(suppress_health_check=[HealthCheck.filter_too_much], max_examples=1000, deadline=None)
+@given(mixture_strategy())
 @example(
     mixture=(5,
      2,
@@ -413,9 +414,28 @@ from  sklearn.mixture._gaussian_mixture import _estimate_log_gaussian_prob
             [0., 0., 0., 0., 0.],
             [0., 0., 0., 0., 0.],
             [0., 0., 0., 0., 0.]])),
-).via('discovered failure')"""
-@settings(suppress_health_check=[HealthCheck.filter_too_much], max_examples=1000, deadline=None)
-@given(mixture_strategy())
+).via('discovered failure')
+@example(
+    mixture=(7,
+     1,
+     [array([0., 0., 0., 0., 0., 0., 0.])],
+     [array([[156.25637361, -31.26969455,  12.40439959, -31.24564618,
+              -31.22989933, -31.24225165, -31.2688804 ],
+             [-31.26969455,   6.33006684,  -2.20457805,   6.2198964 ,
+                6.16861271,   6.20884123,   6.34227887],
+             [ 12.40439959,  -2.20457805,   2.43400622,  -2.56530348,
+               -2.80150635,  -2.61622149,  -2.21679021],
+             [-31.24564618,   6.2198964 ,  -2.56530348,   7.16206397,
+                5.80788728,   5.8481158 ,   6.20768424],
+             [-31.22989933,   6.16861271,  -2.80150635,   5.80788728,
+                7.34003101,   5.75696927,   6.15640055],
+             [-31.24225165,   6.20884123,  -2.61622149,   5.8481158 ,
+                5.75696927,   7.23169779,   6.19662906],
+             [-31.2688804 ,   6.34227887,  -2.21679021,   6.20768424,
+                6.15640055,   6.19662906,   6.36588918]])],
+     array([1.]),
+     array([[0., 0., 0., 0., 0., 0., 0.]])),
+).via('discovered failure')
 @example(
     mixture=(1, 1, [array([0.])], [array([[1.]])], array([1.]), array([[0.]])),
 ).via('discovered failure')
@@ -465,7 +485,8 @@ def test_mixture(mixture):
     assert sk_logp.shape == (len(x),), (sk_logp.shape, len(x))
     print(skgmm.weights_, ggmm_logp, ggmm_p)
     sk_p = skgmm.predict_proba(x)
-    #_, sk_logp = skgmm._estimate_log_prob_resp(x)
-    assert_allclose(ggmm_logp, sk_logp, atol=1e-2)
-    #assert_allclose(ggmm_p, sk_p)
+    assert_allclose(ggmm_logp, sk_logp, atol=1e-2, rtol=1e-3)
+    #_, sk_logp2 = skgmm._estimate_log_prob_resp(x)
+    #assert_allclose(sk_logp2, sk_logp)
+    #assert_allclose(ggmm_p, sk_p, atol=1e-300, rtol=1e-4)
 

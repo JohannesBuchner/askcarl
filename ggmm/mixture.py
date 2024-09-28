@@ -27,8 +27,9 @@ class GaussianMixture:
             covariance matrix for each Gaussian component.
         """
         assert np.isfinite(weights).all()
-        assert len(weights) == len(means)
         assert len(weights) == len(covs)
+        weights = np.asarray(weights)
+        assert weights.shape == (len(means),)
         self.weights = weights[weights > 0]
         self.members = [Gaussian(mean, cov) for mean, cov, w in zip(means, covs, weights) if w > 0]
         assert len(self.weights) == len(self.members)
