@@ -490,3 +490,31 @@ def test_mixture(mixture):
     #assert_allclose(sk_logp2, sk_logp)
     #assert_allclose(ggmm_p, sk_p, atol=1e-300, rtol=1e-4)
 
+def test_import():
+    a = np.vstack((
+        np.random.normal(3, 3, size=(10000, 3)),
+        np.random.normal(0, 1, size=(3000, 3)),
+        np.random.normal(3, 1, size=(10000, 3)),
+    ))
+    assert a.shape == (23000, 3), a.shape
+    skgmm = sklearn.mixture.GaussianMixture(n_components=3)
+    skgmm.fit(a)
+    ggmm_fromsklearn = ggmm.GaussianMixture.from_sklearn(skgmm)
+    
+    means = [g.mean for g in ggmm_fromsklearn.components]
+    covs = [g.cov for g in ggmm_fromsklearn.components]
+    print(means)
+    print([np.diag(cov) for cov in covs])
+    assert any(np.allclose(mean, 3, atol=0.1) for mean in means)
+    assert any(np.allclose(mean, 0, atol=0.1) for mean in means)
+    
+    target_mixture = pypmc.density.mixture.create_gaussian_mixture(
+        means, covs, ggmm_fromsklearn.weights)
+    ggmm_frompypmc = ggmm.GaussianMixture.from_pypmc(target_mixture)
+
+    means2 = [g.mean for g in ggmm_frompypmc.components]
+    covs2 = [g.cov for g in ggmm_frompypmc.components]
+
+    assert_allclose(means2, means)
+    assert_allclose(covs2, covs)
+    

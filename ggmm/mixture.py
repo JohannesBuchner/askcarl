@@ -10,7 +10,7 @@ class GaussianMixture:
     -----------
     weights: list
         weight for each Gaussian component
-    members: list
+    components: list
         list of Gaussian components.
     """
 
@@ -31,10 +31,24 @@ class GaussianMixture:
         weights = np.asarray(weights)
         assert weights.shape == (len(means),)
         self.weights = weights[weights > 0]
-        self.members = [Gaussian(mean, cov) for mean, cov, w in zip(means, covs, weights) if w > 0]
-        assert len(self.weights) == len(self.members)
+        self.components = [Gaussian(mean, cov) for mean, cov, w in zip(means, covs, weights) if w > 0]
+        assert len(self.weights) == len(self.components)
         self.log_weights = np.log(self.weights)
 
+    @staticmethod
+    def from_pypmc(mix):
+        return GaussianMixture(
+            weights=mix.weights,
+            means=[g.mu for g in mix.components],
+            covs=[g.sigma for g in mix.components])
+
+    @staticmethod
+    def from_sklearn(skgmm):
+        return GaussianMixture(
+            weights=skgmm.weights_,
+            means=skgmm.means_,
+            covs=skgmm.covariances_)
+    
     def pdf(self, x, mask):
         """Compute probability density at x.
 
@@ -53,7 +67,7 @@ class GaussianMixture:
         """
         return sum(
             w * g.pdf(x, mask)
-            for w, g in zip(self.weights, self.members))
+            for w, g in zip(self.weights, self.components))
 
     def logpdf(self, x, mask):
         """Compute logarithm of probability density.
@@ -73,6 +87,6 @@ class GaussianMixture:
         """
         return logsumexp([
             w + g.logpdf(x, mask)
-            for w, g in zip(self.log_weights, self.members)],
+            for w, g in zip(self.log_weights, self.components)],
             axis=0)
 
