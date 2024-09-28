@@ -6,18 +6,22 @@ def pdfcdf(x, mask, mean, cov):
     """
     Computes the mixed PDF and CDF for a multivariate Gaussian distribution.
 
-    Parameters:
-    - x: The point (vector) at which to evaluate the probability.
-         For dimensions where `mask == 0`, this is a value for the PDF.
-         For dimensions where `mask == 1`, this is an upper bound for the CDF.
-    - mask: A boolean mask of the same shape as `x`.
-            `mask[i] == 0` means `x[i]` is a value for the PDF.
-            `mask[i] == 1` means `x[i]` is an upper bound for the CDF.
-    - mean: The mean vector of the multivariate normal distribution.
-    - cov: The covariance matrix of the multivariate normal distribution.
+    Parameters
+    -----------
+    x: array
+        The point (vector) at which to evaluate the probability.
+    mask: array
+        A boolean mask of the same shape as `x`, indicating whether the entry
+        is a value (True) or a upper bound (False).
+    mean: array
+        mean vector of the multivariate normal distribution.
+    cov: array
+        covariance matrix of the multivariate normal distribution.
 
-    Returns:
-    - prob: The combined PDF and CDF value.
+    Returns
+    ----------
+    pdf: float
+        Probability density
     """
     assert x.ndim == 2, x.ndim
     assert mask.shape == (x.shape[1],), (mask.shape, x.shape)
@@ -73,15 +77,47 @@ def pdfcdf(x, mask, mean, cov):
 
 class Gaussian:
     def __init__(self, mean, cov):
+        """Generalized Gaussian Likelihood.
+    
+        Parameters
+        -----------
+        mean: array
+            mean vector of the multivariate normal distribution.
+        cov: array
+            covariance matrix of the multivariate normal distribution.
+        """
         self.ndim = len(mean)
         self.powers = 2**np.arange(self.ndim)
         self.mean = mean
         self.cov = cov
         assert mean.shape == (self.ndim,), (mean.shape,)
         assert cov.shape == (self.ndim, self.ndim), (cov.shape, self.ndim)
+        assert np.isfinite(mean).all(), mean
+        assert np.isfinite(cov).all(), cov
         self.rvs = {}
 
     def get_conditional_rv(self, mask):
+        """Build conditional distribution.
+    
+    
+        Parameters
+        -----------
+        mask: array
+            A boolean mask, indicating whether the entry
+            is a value (True) or a upper bound (False).
+    
+        Returns
+        ----------
+        cov_cross: array
+            Covariance matrix part of upper bound and value dimensions.
+        cov_exact: array
+            Covariance matrix part of value dimensions.
+        inv_cov_exact: array
+            Inverse covariance matrix part of value dimensions.
+        rv: scipy.stats.multivariate_normal
+            Multivariate Normal Distribution of the upper bound dimensions,
+            conditioned with `mask`.
+        """
         key = self.powers[mask].sum()
         if key not in self.rvs:
             cov = self.cov
@@ -168,18 +204,20 @@ class Gaussian:
 
     def conditional_pdf(self, x, mask=Ellipsis):
         """
-        Computes the mixed PDF and CDF for a multivariate Gaussian distribution.
+        Compute conditional PDF.
 
-        Parameters:
-        - x: The point (vector) at which to evaluate the probability.
-             For dimensions where `mask == 0`, this is a value for the PDF.
-             For dimensions where `mask == 1`, this is an upper bound for the CDF.
-        - mask: A boolean mask of the same shape as `x`.
-        - mean: The mean vector of the multivariate normal distribution.
-        - cov: The covariance matrix of the multivariate normal distribution.
+        Parameters
+        -----------
+        x: array
+            The points (vector) at which to evaluate the probability.
+        mask: array
+            A boolean mask of the same shape as `x.shape[1]`, indicating whether the entry
+            is a value (True) or a upper bound (False).
 
-        Returns:
-        - prob: The combined PDF and CDF value.
+        Returns
+        ----------
+        pdf: array
+            Probability density. One value for each `x`.
         """
         n_upper, n_exact, cov_cross, cov_exact, inv_cov_exact, x_exact, x_upper, mu_exact, mu_upper, conditional_mean, dist_conditional = \
             self._prepare_conditional_pdf(x=x, mask=mask)
@@ -200,18 +238,20 @@ class Gaussian:
 
     def conditional_logpdf(self, x, mask=Ellipsis):
         """
-        Computes the mixed PDF and CDF for a multivariate Gaussian distribution.
+        Compute conditional log-PDF.
 
-        Parameters:
-        - x: The point (vector) at which to evaluate the probability.
-             For dimensions where `mask == 0`, this is a value for the PDF.
-             For dimensions where `mask == 1`, this is an upper bound for the CDF.
-        - mask: A boolean mask of the same shape as `x`.
-        - mean: The mean vector of the multivariate normal distribution.
-        - cov: The covariance matrix of the multivariate normal distribution.
+        Parameters
+        -----------
+        x: array
+            The points (vector) at which to evaluate the probability.
+        mask: array
+            A boolean mask of the same shape as `x.shape[1]`, indicating whether the entry
+            is a value (True) or a upper bound (False).
 
-        Returns:
-        - prob: The combined PDF and CDF value.
+        Returns
+        ----------
+        logpdf: array
+            logarithm of the probability density. One value for each `x`.
         """
         n_upper, n_exact, cov_cross, cov_exact, inv_cov_exact, x_exact, x_upper, mu_exact, mu_upper, conditional_mean, dist_conditional = \
             self._prepare_conditional_pdf(x=x, mask=mask)
@@ -232,18 +272,20 @@ class Gaussian:
 
     def pdf(self, x, mask):
         """
-        Computes the mixed PDF and CDF for a multivariate Gaussian distribution.
+        Compute conditional PDF.
 
-        Parameters:
-        - x: The point (vector) at which to evaluate the probability.
-             For dimensions where `mask == 0`, this is a value for the PDF.
-             For dimensions where `mask == 1`, this is an upper bound for the CDF.
-        - mask: A boolean mask of the same shape as `x`.
-        - mean: The mean vector of the multivariate normal distribution.
-        - cov: The covariance matrix of the multivariate normal distribution.
+        Parameters
+        -----------
+        x: array
+            The points (vector) at which to evaluate the probability.
+        mask: array
+            A boolean mask of the same shape as `x`, indicating whether the entry
+            is a value (True) or a upper bound (False).
 
-        Returns:
-        - prob: The combined PDF and CDF value.
+        Returns
+        ----------
+        pdf: array
+            probability density. One value for each `x`.
         """
         assert mask.shape == (len(x), self.ndim), (mask.shape, (len(x), self.ndim))
         assert x.shape == (len(mask), self.ndim), (x.shape, (len(x), self.ndim))
@@ -259,18 +301,20 @@ class Gaussian:
 
     def logpdf(self, x, mask):
         """
-        Computes the mixed PDF and CDF for a multivariate Gaussian distribution.
+        Compute conditional log-PDF.
 
-        Parameters:
-        - x: The point (vector) at which to evaluate the probability.
-             For dimensions where `mask == 0`, this is a value for the PDF.
-             For dimensions where `mask == 1`, this is an upper bound for the CDF.
-        - mask: A boolean mask of the same shape as `x`.
-        - mean: The mean vector of the multivariate normal distribution.
-        - cov: The covariance matrix of the multivariate normal distribution.
+        Parameters
+        -----------
+        x: array
+            The points (vector) at which to evaluate the probability.
+        mask: array
+            A boolean mask of the same shape as `x`, indicating whether the entry
+            is a value (True) or a upper bound (False).
 
-        Returns:
-        - prob: The combined PDF and CDF value.
+        Returns
+        ----------
+        logpdf: array
+            logarithm of the probability density. One value for each `x`.
         """
         assert mask.shape == (len(x), self.ndim), (mask.shape, (len(x), self.ndim))
         assert x.shape == (len(mask), self.ndim), (x.shape, (len(x), self.ndim))
@@ -281,17 +325,4 @@ class Gaussian:
             members = powers == power
             logpdf_values[members] = self.conditional_logpdf(x[members,:], mask[index, :])
         return logpdf_values
-
-
-class GaussianMixture:
-    def __init__(self, weights, means, covs):
-        assert len(weights) == len(means)
-        assert len(weights) == len(covs)
-        self.members = [Gaussian(mean, cov) for mean, cov in zip(means, covs)]
-        self.weights = weights
-
-    def pdf(self, x, mask):
-        return sum(
-            w * g.pdf(x, mask) 
-            for w, g in zip(self.weights, self.members))
 

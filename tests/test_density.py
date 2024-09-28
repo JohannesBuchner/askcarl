@@ -3,8 +3,10 @@ from numpy import array
 from scipy.stats import norm, multivariate_normal
 from scipy.integrate import dblquad
 from numpy.testing import assert_allclose
-from hypothesis import given, strategies as st, example, settings
+from hypothesis import given, strategies as st, example, settings, HealthCheck
 from hypothesis.extra.numpy import arrays
+import pypmc.density.mixture
+import sklearn.mixture
 
 import ggmm
 
@@ -252,6 +254,15 @@ def test_trivial_example():
     assert_allclose(norm(0, 1).cdf(x), g.conditional_pdf(x, np.array([False])))
 
 
+def test_trivial_mixture():
+    x = np.zeros((1, 1))
+    mask = np.ones((1, 1), dtype=bool)
+    p_truth = norm(0, 1).pdf(x)[0]
+    g = ggmm.Gaussian(mean=np.zeros(1), cov=np.eye(1))
+    assert_allclose(p_truth, g.pdf(x, mask))
+    mix = ggmm.GaussianMixture(means=[np.zeros(1)], covs=[np.eye(1)], weights=[1.0])
+    assert_allclose(p_truth, mix.pdf(x, mask))
+
 # Strategy to generate arbitrary dimensionality mean and covariance
 @st.composite
 def mean_and_cov(draw):
@@ -294,6 +305,7 @@ def mean_and_diag_stdevs2(draw):
     x = draw(arrays(np.float64, (dim,), elements=st.floats(-1e6, 1e6)))
     i = draw(st.integers(min_value=0, max_value=dim - 1))
     return dim, mu, stdevs, x, i
+
 
 @given(mean_and_diag_stdevs2())
 @example(
@@ -338,3 +350,115 @@ def test_single_with_UL(mean_and_cov):
     logpa_expected = np.array([0, -np.inf]) + rv_truth.logpdf(xi[:,mask])
     logpa = rv.logpdf(xi, np.array([mask,mask]))
     assert_allclose(logpa, logpa_expected)
+
+@st.composite
+def mixture_strategy(draw):
+    dim = draw(st.integers(min_value=1, max_value=10))
+    ntest = draw(st.integers(min_value=1, max_value=10))
+    ncomponents = draw(st.integers(min_value=1, max_value=10))
+    means = [draw(arrays(np.float64, (dim,), elements=st.floats(-10, 10))) for _ in range(ncomponents)]
+    covs = [make_covariance_matrix_via_QR(
+        draw(arrays(np.float64, (dim,), elements=st.floats(1e-6, 10))),
+        draw(arrays(np.float64, (dim,dim), elements=st.floats(-10, 10)).filter(valid_QR))
+    ) for _ in range(ncomponents)]
+    weights = draw(arrays(np.float64, (ncomponents,), elements=st.floats(0, 1)).filter(lambda weights: (weights>0).any()))
+    weights /= weights.sum()
+    x = draw(arrays(np.float64, (ntest, dim), elements=st.floats(-10, 10)))
+    return dim, ncomponents, means, covs, weights, x
+
+from  sklearn.mixture._gaussian_mixture import _estimate_log_gaussian_prob
+
+"""
+@example(
+    mixture=(5,
+     2,
+     [array([0., 0., 0., 0., 0.]), array([0., 0., 0., 0., 0.])],
+     [array([[ 1.49244777, -0.07387876, -0.02245019, -0.25755223,  0.35388117],
+             [-0.07387876,  1.96311104,  0.58596818,  0.48862124,  0.96229954],
+             [-0.02245019,  0.58596818,  1.89882532,  0.54004981,  0.97515668],
+             [-0.25755223,  0.48862124,  0.54004981,  2.05494777,  0.91638117],
+             [ 0.35388117,  0.96229954,  0.97515668,  0.91638117,  1.1461626 ]]),
+      array([[0.90301624, 0.46133735, 0.34701563, 0.13561725, 0.34582217],
+             [0.46133735, 0.55336326, 0.4630311 , 0.36990653, 0.46231502],
+             [0.34701563, 0.4630311 , 0.89632843, 0.14126309, 0.3479933 ],
+             [0.13561725, 0.36990653, 0.14126309, 0.55367394, 0.13887617],
+             [0.34582217, 0.46231502, 0.3479933 , 0.13887617, 0.89943142]])],
+     array([0., 1.]),
+     array([[0., 7., 0., 0., 0.]])),
+).via('discovered failure')
+@example(
+    mixture=(5,
+     2,
+     [array([0., 0., 0., 0., 0.]), array([0., 8., 0., 0., 0.])],
+     [array([[ 1.49244777e-06, -7.38787586e-08, -2.24501872e-08,
+              -2.57552228e-07,  3.53881174e-07],
+             [-7.38787586e-08,  1.96311104e-06,  5.85968180e-07,
+               4.88621241e-07,  9.62299541e-07],
+             [-2.24501872e-08,  5.85968180e-07,  1.89882532e-06,
+               5.40049813e-07,  9.75156684e-07],
+             [-2.57552228e-07,  4.88621241e-07,  5.40049813e-07,
+               2.05494777e-06,  9.16381174e-07],
+             [ 3.53881174e-07,  9.62299541e-07,  9.75156684e-07,
+               9.16381174e-07,  1.14616260e-06]]),
+      array([[ 0.2641    ,  0.05401538, -0.03798462,  0.14390769, -0.08798462],
+             [ 0.05401538,  0.28357929,  0.23057929,  0.16052426,  0.21807929],
+             [-0.03798462,  0.23057929,  0.46757929,  0.06852426,  0.08007929],
+             [ 0.14390769,  0.16052426,  0.06852426,  0.31735444,  0.01852426],
+             [-0.08798462,  0.21807929,  0.08007929,  0.01852426,  0.50507929]])],
+     array([0., 1.]),
+     array([[0., 0., 0., 0., 0.],
+            [0., 0., 0., 0., 0.],
+            [0., 0., 0., 0., 0.],
+            [0., 0., 0., 0., 0.],
+            [0., 0., 0., 0., 0.],
+            [0., 0., 0., 0., 0.]])),
+).via('discovered failure')"""
+@settings(suppress_health_check=[HealthCheck.filter_too_much])
+@given(mixture_strategy())
+@example(
+    mixture=(1, 1, [array([0.])], [array([[1.]])], array([1.]), array([[0.]])),
+).via('discovered failure')
+def test_mixture(mixture):
+    ndim, ncomponents, means, covs, weights, x = mixture
+    mask = np.ones(x.shape, dtype=bool)
+
+    if not all([valid_covariance_matrix(cov) for cov in covs]):
+        return
+
+    print("inputs:", ndim, ncomponents, means, covs, weights, x, mask)
+    gmm = ggmm.GaussianMixture(weights, means, covs)
+    #assert_allclose(gmm.log_weights, np.log(weights))
+    ggmm_p = gmm.pdf(x, mask=mask)
+    ggmm_logp = gmm.logpdf(x, mask=mask)
+    gaussians = [multivariate_normal(mean, cov) for mean, cov in zip(means, covs)]
+    if len(gaussians) == 1:
+        assert_allclose(gmm.log_weights, 0)
+        assert_allclose(gmm.members[0].pdf(x, mask), gaussians[0].pdf(x))
+        assert_allclose(gmm.members[0].logpdf(x, mask), gaussians[0].logpdf(x))
+        assert_allclose(ggmm_p, gaussians[0].pdf(x))
+        assert_allclose(ggmm_logp, gaussians[0].logpdf(x))
+
+    target_mixture = pypmc.density.mixture.create_gaussian_mixture(
+        means, covs, weights)
+    pypmc_logp = np.array([target_mixture.evaluate(xi) for xi in x])
+    assert_allclose(ggmm_p, np.exp(pypmc_logp), atol=1e-300, rtol=1e-4)
+    assert_allclose(ggmm_logp[pypmc_logp>-100000], pypmc_logp[pypmc_logp>-100000], atol=0.2)
+    assert_allclose(ggmm_logp[ggmm_logp>-100000], ggmm_logp[ggmm_logp>-100000], atol=0.2)
+
+    precisions = [np.linalg.inv(cov) for cov in covs]
+    # compare results of GMM to sklearn
+    skgmm = sklearn.mixture.GaussianMixture(
+        n_components=ncomponents, weights_init=weights,
+        means_init=means, precisions_init=precisions)
+    skgmm._initialize(np.zeros((1, 1)), None)
+    skgmm._set_parameters((weights, np.array(means), covs, skgmm.precisions_cholesky_))
+    assert_allclose(skgmm.weights_, weights)
+    assert_allclose(skgmm.means_, means)
+    assert_allclose(skgmm.covariances_, covs)
+    # compare results of GMM to pypmc
+    print(x, skgmm.means_, skgmm.precisions_cholesky_)
+    print(_estimate_log_gaussian_prob(x, skgmm.means_, skgmm.precisions_cholesky_, 'full'))
+    print(skgmm.weights_, ggmm_logp, ggmm_p)
+    sk_p = skgmm.predict_proba(x)
+    #assert_allclose(ggmm_p, sk_p)
+
