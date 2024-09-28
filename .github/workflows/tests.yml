@@ -46,6 +46,9 @@ jobs:
     - name: Test with pytest
       run: PYTHONPATH=. python3 -m coverage run -a -m pytest
 
+    - name: Install
+      run: python3 -m pip install .
+
     - name: Convert coverage output to lcov for coveralls
       run: |
         coverage-lcov
