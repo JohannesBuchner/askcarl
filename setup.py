@@ -51,5 +51,5 @@ setup(
     tests_require=test_requirements,
     extras_require=dict(plot=['matplotlib', 'scipy']),
     url='https://github.com/JohannesBuchner/GGMM',
-    version='0.0.1',
+    version='0.1.0',
 )
