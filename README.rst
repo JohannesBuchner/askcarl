@@ -1,10 +1,20 @@
-====
+========
 askcarl
-====
+========
 
 Gaussian Mixture Model with support for heterogeneous missing and censored (upper limit) data.
 
 Pure python.
+
+.. image:: https://img.shields.io/pypi/v/askcarl.svg
+        :target: https://pypi.python.org/pypi/askcarl
+
+.. image:: https://github.com/JohannesBuchner/askcarl/actions/workflows/tests.yml/badge.svg
+        :target: https://github.com/JohannesBuchner/askcarl/actions/workflows/tests.yml
+
+.. image:: https://img.shields.io/badge/docs-published-ok.svg
+        :target: https://johannesbuchner.github.io/askcarl/
+        :alt: Documentation Status
 
 About
 -----
@@ -19,9 +29,9 @@ Missing data can occur when no measurement of a given feature was taken.
 In that case, the probability of a GMM density can be obtained 
 by marginalisation.
 This is implemented in askcarl analytically.
-This is different to `pygmmis <https://github.com/pmelchior/pygmmis>`,
+This is different to `pygmmis <https://github.com/pmelchior/pygmmis>`_,
 which approximates this situation with large measurement uncertainties.
-This is different to `<https://github.com/avati/gmm-mcar>`,
+This is different to `gmm-mcar <https://github.com/avati/gmm-mcar>`_,
 which assumes that missing measurements occur uniformly randomly.
 
 Upper limits can occur when the measurement of a given feature was not
@@ -31,7 +41,7 @@ marginalisation up to the upper limit.
 This is implemented in askcarl analytically, and each data point can have
 its own individual upper limit (heterogeneous).
 This is different to typical censored GMMs, which assume a common 
-upper limit for all data (homogeneous) (`see here for example <https://github.com/tranbahien/Truncated-Censored-EM>`).
+upper limit for all data (homogeneous) (`see here for example <https://github.com/tranbahien/Truncated-Censored-EM>`_).
 
 For these cases, askcarl implements evaluating the PDF and log-PDF of a mixture.
 askcarl does not implement finding the mixture parameters.
@@ -42,7 +52,7 @@ Example
 ---------
 
 Lets take the Iris flower data set (dots), and learn GMM as in
-this `scikit-learn example <https://scikit-learn.org/stable/auto_examples/mixture/plot_gmm_covariances.html>`::
+this `scikit-learn example <https://scikit-learn.org/stable/auto_examples/mixture/plot_gmm_covariances.html>`_::
 
         iris = datasets.load_iris()
         X = iris.data[:,:3]
@@ -114,16 +124,6 @@ simulation-based inference (SBI) generating samples, a EM algorithm
 identifying the GMM parameters, but applied to data with missing data or upper limits.
 
 This is a common case for photometric flux measurements in astronomy.
-
-.. image:: https://img.shields.io/pypi/v/askcarl.svg
-        :target: https://pypi.python.org/pypi/askcarl
-
-.. image:: https://github.com/JohannesBuchner/askcarl/actions/workflows/tests.yml/badge.svg
-        :target: https://github.com/JohannesBuchner/askcarl/actions/workflows/tests.yml
-
-.. image:: https://img.shields.io/badge/docs-published-ok.svg
-        :target: https://johannesbuchner.github.io/askcarl/
-        :alt: Documentation Status
 
 Usage
 ^^^^^
