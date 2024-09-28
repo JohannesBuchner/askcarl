@@ -40,11 +40,8 @@ jobs:
     - name: Check doc style
       run: pydocstyle askcarl/*.py
 
-    - name: ls
-      run: ls; git ls-files
-    
     - name: Test package
-      run: python3 -m coverage run example/iris.py
+      run: python3 -m coverage run examples/iris.py
 
     - name: Test with pytest
       run: PYTHONPATH=. python3 -m coverage run -a -m pytest
