@@ -39,6 +39,9 @@ jobs:
 
     - name: Check doc style
       run: pydocstyle askcarl/*.py
+
+    - name: ls
+      run: ls; git ls-files
     
     - name: Test package
       run: python3 -m coverage run example/iris.py
