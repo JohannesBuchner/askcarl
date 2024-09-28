@@ -24,7 +24,7 @@ setup_requirements = ['pytest-runner', ]
 test_requirements = ['pytest>=3', ]
 
 setup(
-    keywords='Generalized Gaussian Mixture Model',
+    keywords='Multivariate Gaussians with support for upper limits and missing data',
     name='askcarl',
     author="Johannes Buchner",
     author_email='johannes.buchner.acad@gmx.com',

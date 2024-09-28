@@ -36,6 +36,8 @@ upper limit for all data (homogeneous) (`see here for example <https://github.co
 For these cases, askcarl implements evaluating the PDF and log-PDF of a mixture.
 askcarl does not implement finding the mixture parameters.
 
+Just ask Car Friedrich Gauss for the probability.
+
 Example
 ---------
 
