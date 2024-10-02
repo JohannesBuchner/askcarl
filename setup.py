@@ -45,7 +45,7 @@ setup(
     install_requires=requirements,
     license="GNU General Public License v3",
     long_description=readme + '\n\n' + history,
-    py_modules=['snowline'],
+    packages=['askcarl'],
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
