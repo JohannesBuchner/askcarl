@@ -379,7 +379,6 @@ def test_import():
 
     assert_allclose(means2, means)
     assert_allclose(covs2, covs)
-    
 
 @st.composite
 def mixture_strategy(draw):
@@ -571,7 +570,7 @@ def test_mixture(mixture):
     print(skgmm.weights_, askcarl_logp, askcarl_p)
     sk_p = skgmm.predict_proba(x)
     assert_allclose(askcarl_logp, sk_logp, atol=1e-2, rtol=1e-2)
-    #_, sk_logp2 = skgmm._estimate_log_prob_resp(x)
-    #assert_allclose(sk_logp2, sk_logp)
-    #assert_allclose(askcarl_p, sk_p, atol=1e-300, rtol=1e-4)
+    sk_logp1, sk_logp2 = skgmm._estimate_log_prob_resp(x)
+    assert_allclose(sk_logp1, sk_logp)
+    # assert_allclose(askcarl_p, sk_p, atol=1e-300, rtol=1e-4)
 
