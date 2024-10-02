@@ -102,7 +102,7 @@ def valid_covariance_matrix(A, min_std=1e-6):
         return False
 
     try:
-        np.linalg.inv(A)
+        np.linalg.inv(np.linalg.inv(A))
     except np.linalg.LinAlgError:
         return False
 
