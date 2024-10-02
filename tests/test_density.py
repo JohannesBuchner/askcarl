@@ -4,7 +4,7 @@ from scipy.stats import norm, multivariate_normal
 from scipy.integrate import dblquad
 from scipy.special import logsumexp
 from numpy.testing import assert_allclose
-from hypothesis import given, strategies as st, example, settings, HealthCheck
+from hypothesis import given, strategies as st, example, settings, HealthCheck, reproduce_failure
 from hypothesis.extra.numpy import arrays
 import pypmc.density.mixture
 import sklearn.mixture
@@ -352,6 +352,35 @@ def test_single_with_UL(mean_and_cov):
     logpa = rv.logpdf(xi, np.array([mask,mask]))
     assert_allclose(logpa, logpa_expected)
 
+def test_import():
+    a = np.vstack((
+        np.random.normal(3, 3, size=(10000, 3)),
+        np.random.normal(0, 1, size=(3000, 3)),
+        np.random.normal(3, 1, size=(10000, 3)),
+    ))
+    assert a.shape == (23000, 3), a.shape
+    skgmm = sklearn.mixture.GaussianMixture(n_components=3)
+    skgmm.fit(a)
+    askcarl_fromsklearn = askcarl.GaussianMixture.from_sklearn(skgmm)
+    
+    means = [g.mean for g in askcarl_fromsklearn.components]
+    covs = [g.cov for g in askcarl_fromsklearn.components]
+    print(means)
+    print([np.diag(cov) for cov in covs])
+    assert any(np.allclose(mean, 3, atol=0.1) for mean in means)
+    assert any(np.allclose(mean, 0, atol=0.1) for mean in means)
+    
+    target_mixture = pypmc.density.mixture.create_gaussian_mixture(
+        means, covs, askcarl_fromsklearn.weights)
+    askcarl_frompypmc = askcarl.GaussianMixture.from_pypmc(target_mixture)
+
+    means2 = [g.mean for g in askcarl_frompypmc.components]
+    covs2 = [g.cov for g in askcarl_frompypmc.components]
+
+    assert_allclose(means2, means)
+    assert_allclose(covs2, covs)
+    
+
 @st.composite
 def mixture_strategy(draw):
     dim = draw(st.integers(min_value=1, max_value=10))
@@ -510,6 +539,11 @@ def test_mixture(mixture):
         assert_allclose(askcarl_p, gaussians[0].pdf(x))
         assert_allclose(askcarl_logp, gaussians[0].logpdf(x))
 
+    pdf_expected = sum(w * g.pdf(x) for g, w in zip(gaussians, weights))
+    logpdf_expected = logsumexp([np.log(w) + g.logpdf(x) for g, w in zip(gaussians, weights)], axis=0)
+    assert_allclose(askcarl_p, pdf_expected)
+    assert_allclose(askcarl_logp, logpdf_expected)
+
     target_mixture = pypmc.density.mixture.create_gaussian_mixture(
         means, covs, weights)
     pypmc_logp = np.array([target_mixture.evaluate(xi) for xi in x])
@@ -541,31 +575,3 @@ def test_mixture(mixture):
     #assert_allclose(sk_logp2, sk_logp)
     #assert_allclose(askcarl_p, sk_p, atol=1e-300, rtol=1e-4)
 
-def test_import():
-    a = np.vstack((
-        np.random.normal(3, 3, size=(10000, 3)),
-        np.random.normal(0, 1, size=(3000, 3)),
-        np.random.normal(3, 1, size=(10000, 3)),
-    ))
-    assert a.shape == (23000, 3), a.shape
-    skgmm = sklearn.mixture.GaussianMixture(n_components=3)
-    skgmm.fit(a)
-    askcarl_fromsklearn = askcarl.GaussianMixture.from_sklearn(skgmm)
-    
-    means = [g.mean for g in askcarl_fromsklearn.components]
-    covs = [g.cov for g in askcarl_fromsklearn.components]
-    print(means)
-    print([np.diag(cov) for cov in covs])
-    assert any(np.allclose(mean, 3, atol=0.1) for mean in means)
-    assert any(np.allclose(mean, 0, atol=0.1) for mean in means)
-    
-    target_mixture = pypmc.density.mixture.create_gaussian_mixture(
-        means, covs, askcarl_fromsklearn.weights)
-    askcarl_frompypmc = askcarl.GaussianMixture.from_pypmc(target_mixture)
-
-    means2 = [g.mean for g in askcarl_frompypmc.components]
-    covs2 = [g.cov for g in askcarl_frompypmc.components]
-
-    assert_allclose(means2, means)
-    assert_allclose(covs2, covs)
-    
