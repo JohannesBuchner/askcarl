@@ -592,10 +592,9 @@ def test_mixture(mixture):
         skgmm = sklearn.mixture.GaussianMixture(
             n_components=ncomponents, weights_init=weights,
             means_init=means, precisions_init=precisions)
+        skgmm._initialize(np.zeros((1, 1)), None)
     except np.linalg.LinAlgError:
         return
-        
-    skgmm._initialize(np.zeros((1, 1)), None)
     skgmm._set_parameters((weights, np.array(means), covs, skgmm.precisions_cholesky_))
     assert_allclose(skgmm.weights_, weights)
     assert_allclose(skgmm.means_, means)
