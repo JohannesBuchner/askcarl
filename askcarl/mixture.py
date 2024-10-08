@@ -70,10 +70,21 @@ class GaussianMixture:
         mix: `GaussianMixture`
             Generalized Gaussian mixture.
         """
+        covariance_type = skgmm.covariance_type
+        if covariance_type == 'full':
+            covs = skgmm.covariances_
+        elif covariance_type == 'tied':
+            covs = [skgmm.covariances_] * len(skgmm.weights_)
+        elif covariance_type == 'diag':
+            covs = [np.diag(cov) for cov in skgmm.covariances_]
+        elif covariance_type == 'spherical':
+            covs = [np.eye(skgmm.means_.shape[1]) * cov for cov in skgmm.covariances_]
+        else:
+            raise ValueError(f'unknown covariance_type "{covariance_type}"')
         return GaussianMixture(
             weights=skgmm.weights_,
             means=skgmm.means_,
-            covs=skgmm.covariances_)
+            covs=covs)
 
     def pdf(self, x, mask):
         """Compute probability density at x.
