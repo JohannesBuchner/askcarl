@@ -543,6 +543,17 @@ from  sklearn.mixture._gaussian_mixture import _estimate_log_gaussian_prob
      array([1.]),
      array([[0., 0., 0.]])),
 ).via('discovered failure')
+@example(
+    mixture=(4,
+     1,
+     [array([0., 0., 0., 0.])],
+     [array([[ 198.43139701,  208.34459689,  178.58081708, -148.82075727],
+             [ 208.34459689,  586.13441827,  514.06354813, -278.71597676],
+             [ 178.58081708,  514.06354813,  450.99268609, -242.78684396],
+             [-148.82075727, -278.71597676, -242.78684396,  152.43362983]])],
+     array([1.]),
+     array([[0., 0., 0., 0.]])),
+).via('discovered failure')
 def test_mixture(mixture):
     ndim, ncomponents, means, covs, weights, x = mixture
     mask = np.ones(x.shape, dtype=bool)
@@ -577,9 +588,13 @@ def test_mixture(mixture):
 
     precisions = [np.linalg.inv(cov) for cov in covs]
     # compare results of GMM to sklearn
-    skgmm = sklearn.mixture.GaussianMixture(
-        n_components=ncomponents, weights_init=weights,
-        means_init=means, precisions_init=precisions)
+    try:
+        skgmm = sklearn.mixture.GaussianMixture(
+            n_components=ncomponents, weights_init=weights,
+            means_init=means, precisions_init=precisions)
+    except np.linalg.LinAlgError:
+        return
+        
     skgmm._initialize(np.zeros((1, 1)), None)
     skgmm._set_parameters((weights, np.array(means), covs, skgmm.precisions_cholesky_))
     assert_allclose(skgmm.weights_, weights)
