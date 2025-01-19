@@ -2,7 +2,7 @@
 askcarl
 ========
 
-Gaussian Mixture Model with support for heterogeneous missing and censored (upper limit) data.
+Gaussian Mixture Model likelihoods with support for heterogeneous missing and censored (upper limit) data.
 
 Pure python.
 
