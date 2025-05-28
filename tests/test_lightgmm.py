@@ -3,8 +3,10 @@ from sklearn.mixture import GaussianMixture
 
 from askcarl.lightgmm import LightGMM
 
-
+import askcarl.mixture
+    
 def test_single_gauss():
+    np.random.seed(234)
     N = 100000
     for D in [2, 5, 20]:
         X = np.random.normal(size=(N, D))
@@ -22,6 +24,7 @@ def test_single_gauss():
         np.testing.assert_allclose(score, score_ref)
 
 def test_two_gauss():
+    np.random.seed(123)
     N = 100000
     for D in [2, 5, 20]:
         X = np.vstack((np.random.normal(size=(N, D)) + 10, np.random.normal(size=(N, D))))
@@ -50,7 +53,22 @@ def test_two_gauss():
         np.testing.assert_allclose(B.mean(axis=0), 10, atol=0.02 * D)
         np.testing.assert_allclose(A.std(axis=0), 1, atol=0.02 * D)
         np.testing.assert_allclose(B.std(axis=0), 1, atol=0.02 * D)
+        gmmsk = gmm.to_sklearn()
+        for attribute in 'means_', 'precisions_cholesky_', 'weights_', 'covariances_':
+            np.testing.assert_allclose(getattr(gmmsk, attribute), getattr(gmm, attribute))
+        assert gmmsk.covariance_type == gmm.covariance_type
+        np.testing.assert_allclose(A.mean(axis=0), 0, atol=0.02 * D)
+        np.testing.assert_allclose(B.mean(axis=0), 10, atol=0.02 * D)
+        np.testing.assert_allclose(A.std(axis=0), 1, atol=0.02 * D)
+        np.testing.assert_allclose(B.std(axis=0), 1, atol=0.02 * D)
         
+        mix = askcarl.mixture.GaussianMixture.from_sklearn(gmm)
+        np.testing.assert_allclose(mix.weights, gmm.weights_)
+        np.testing.assert_allclose(mix.log_weights, np.log(gmm.weights_))
+        for i, comp in enumerate(mix.components):
+            np.testing.assert_allclose(comp.mean, gmm.means_[i])
+            np.testing.assert_allclose(comp.cov, gmm.covariances_[i])
+
         gmm_ref = GaussianMixture(2)
         gmm_ref.fit(X)
         score_ref = gmm_ref.score(X)
