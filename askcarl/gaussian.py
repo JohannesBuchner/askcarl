@@ -78,18 +78,17 @@ def pdfcdf(x, mask, mean, cov):
 
 
 class Gaussian:
-    """Multivariate Gaussians with support for upper limits and missing data."""
+    """Multivariate Gaussians with support for upper limits and missing data.
+
+    Parameters
+    -----------
+    mean: array
+        mean vector of the multivariate normal distribution.
+    cov: array
+        covariance matrix of the multivariate normal distribution.
+    """
 
     def __init__(self, mean, cov):
-        """Initialize.
-
-        Parameters
-        -----------
-        mean: array
-            mean vector of the multivariate normal distribution.
-        cov: array
-            covariance matrix of the multivariate normal distribution.
-        """
         self.ndim = len(mean)
         self.powers = 2**np.arange(self.ndim)
         self.mean = mean

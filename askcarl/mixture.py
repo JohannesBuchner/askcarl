@@ -8,6 +8,15 @@ from .gaussian import Gaussian
 class GaussianMixture:
     """Mixture of Gaussians.
 
+    Parameters
+    -----------
+    weights: list
+        weight for each Gaussian component
+    means: list
+        mean vector for each Gaussian component.
+    covs: list
+        covariance matrix for each Gaussian component.
+
     Attributes
     -----------
     weights: list
@@ -17,23 +26,12 @@ class GaussianMixture:
     """
 
     def __init__(self, weights, means, covs):
-        """Initialize.
-
-        Parameters
-        -----------
-        weights: list
-            weight for each Gaussian component
-        means: list
-            mean vector for each Gaussian component.
-        covs: list
-            covariance matrix for each Gaussian component.
-        """
         assert np.isfinite(weights).all()
         assert len(weights) == len(covs)
         weights = np.asarray(weights)
         assert weights.shape == (len(means),)
-        self.weights = weights[weights > 0]
         self.components = [Gaussian(mean, cov) for mean, cov, w in zip(means, covs, weights) if w > 0]
+        self.weights = weights[weights > 0]
         assert len(self.weights) == len(self.components)
         self.log_weights = np.log(self.weights)
 
@@ -71,6 +69,11 @@ class GaussianMixture:
             Generalized Gaussian mixture.
         """
         covariance_type = skgmm.covariance_type
+        if hasattr(skgmm, '_gmm') and covariance_type == 'full':
+            return GaussianMixture(
+                weights=skgmm._gmm.weights[0,:,0,0],
+                means=skgmm._gmm.means[0,:,:,0],
+                covs=skgmm._gmm.covariances.precisions_cholesky_numpy)
         if covariance_type == 'full':
             covs = skgmm.covariances_
         elif covariance_type == 'tied':
