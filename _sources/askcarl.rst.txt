@@ -12,6 +12,14 @@ askcarl.gaussian module
    :undoc-members:
    :show-inheritance:
 
+askcarl.lightgmm module
+-----------------------
+
+.. automodule:: askcarl.lightgmm
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 askcarl.mixture module
 ----------------------
 

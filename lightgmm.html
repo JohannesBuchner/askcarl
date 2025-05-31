@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Python Module Index &mdash; askcarl 1.1.0 documentation</title>
+  <title>LightGMM &mdash; askcarl 1.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
 
   
-    <link rel="canonical" href="https://johannesbuchner.github.io/askcarl/py-modindex.html" />
+    <link rel="canonical" href="https://johannesbuchner.github.io/askcarl/lightgmm.html" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -21,10 +22,7 @@
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" />
- 
-
-
+    <link rel="search" title="Search" href="search.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -72,7 +70,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Python Module Index</li>
+      <li class="breadcrumb-item active">LightGMM</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -81,39 +79,48 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-
-   <h1>Python Module Index</h1>
-
-   <div class="modindex-jumpbox">
-   <a href="#cap-a"><strong>a</strong></a>
-   </div>
-
-   <table class="indextable modindextable">
-     <tr class="pcap"><td></td><td>&#160;</td><td></td></tr>
-     <tr class="cap" id="cap-a"><td></td><td>
-       <strong>a</strong></td><td></td></tr>
-     <tr>
-       <td><img src="_static/minus.png" class="toggler"
-              id="toggle-1" style="display: none" alt="-" /></td>
-       <td>
-       <a href="askcarl.html#module-askcarl"><code class="xref">askcarl</code></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&#160;&#160;&#160;
-       <a href="askcarl.html#module-askcarl.gaussian"><code class="xref">askcarl.gaussian</code></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&#160;&#160;&#160;
-       <a href="askcarl.html#module-askcarl.lightgmm"><code class="xref">askcarl.lightgmm</code></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&#160;&#160;&#160;
-       <a href="askcarl.html#module-askcarl.mixture"><code class="xref">askcarl.mixture</code></a></td><td>
-       <em></em></td></tr>
-   </table>
+  <section id="lightgmm">
+<h1>LightGMM<a class="headerlink" href="#lightgmm" title="Link to this heading"></a></h1>
+<p>LightGMM is a extremely fast construction of a GMM for large data sets.</p>
+<section id="method">
+<h2>Method<a class="headerlink" href="#method" title="Link to this heading"></a></h2>
+<p>If refine_weights=False, LightGMM relies on scikit-learn’s KMeans
+for initialisation, using kmeans++ or random data samples
+(‘random’, very fast) for initally guessing the cluster.</p>
+<p>The KMeans steps (n_iter and max_iter parameters) give the cluster centers.
+Regularized covariance matrices are then computed from cluster members.
+These set the shapes and locations of the Gaussian mixture model.</p>
+<p>The GMM component weights are assigned proportional to number of cluster members.</p>
+<p>Alternatively, if refine_weights=True, with a single E step is performed
+for maximizing the training set likelihood.</p>
+</section>
+<section id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="Link to this heading"></a></h2>
+<p>You need scikit-learn and jax installed.
+These are not installed by default with askcarl.</p>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<p>The API is scikit-learn-like:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nv">gmm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>LightGMM<span class="o">(</span>**kwargs<span class="o">)</span>
+gmm.fit<span class="o">(</span>X_train<span class="o">)</span>
+<span class="nv">logprob</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>gmm.score_samples<span class="o">(</span>X_test<span class="o">)</span>
+<span class="nv">score</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>gmm.score<span class="o">(</span>X_test<span class="o">)</span>
+</pre></div>
+</div>
+<p>You can also convert to a scikit-learn GaussianMixture object:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nv">gmmsk</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>gmm.to_sklearn<span class="o">()</span>
+</pre></div>
+</div>
+<p>See the <a class="reference external" href="askcarl.html#module-askcarl.lightgmm">API documentation of the LightGMM module</a>.</p>
+</section>
+<section id="performance">
+<h2>Performance<a class="headerlink" href="#performance" title="Link to this heading"></a></h2>
+<p>LightGMM achieves sub-100ms constructions for data sets
+with 50000 samples and ~15 features.</p>
+<p>See this benchmark: <a class="reference external" href="https://github.com/JohannesBuchner/GMM-benchmark">https://github.com/JohannesBuchner/GMM-benchmark</a></p>
+</section>
+</section>
 
 
            </div>

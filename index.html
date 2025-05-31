@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome to askcarl’s documentation! &mdash; askcarl 0.1.0 documentation</title>
+  <title>Welcome to askcarl’s documentation! &mdash; askcarl 1.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
 
@@ -16,7 +16,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=01f34227"></script>
+        <script src="_static/documentation_options.js?v=fc837d61"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
@@ -38,7 +38,7 @@
             askcarl
           </a>
               <div class="version">
-                0.1.0
+                1.1.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -94,7 +94,7 @@
 </div>
 <section id="askcarl">
 <h2>askcarl<a class="headerlink" href="#askcarl" title="Link to this heading"></a></h2>
-<p>Gaussian Mixture Model with support for heterogeneous missing and censored (upper limit) data.</p>
+<p>Gaussian Mixture Model likelihoods with support for heterogeneous missing and censored (upper limit) data.</p>
 <p>Pure python.</p>
 <a class="reference external image-reference" href="https://pypi.python.org/pypi/askcarl"><img alt="https://img.shields.io/pypi/v/askcarl.svg" src="https://img.shields.io/pypi/v/askcarl.svg" /></a>
 <a class="reference external image-reference" href="https://github.com/JohannesBuchner/askcarl/actions/workflows/tests.yml"><img alt="https://github.com/JohannesBuchner/askcarl/actions/workflows/tests.yml/badge.svg" src="https://github.com/JohannesBuchner/askcarl/actions/workflows/tests.yml/badge.svg" /></a>
@@ -123,8 +123,8 @@ its own individual upper limit (heterogeneous).
 This is different to typical censored GMMs, which assume a common
 upper limit for all data (homogeneous) (<a class="reference external" href="https://github.com/tranbahien/Truncated-Censored-EM">see here for example</a>).</p>
 <p>For these cases, askcarl implements evaluating the PDF and log-PDF of a mixture.
-askcarl does not implement finding the mixture parameters.</p>
-<p>Just ask Car Friedrich Gauss for the probability.</p>
+Ingestion of GMM objects from scikit-learn, pypmc, gmmx and LightGMM are implemented.</p>
+<p>Just ask Carl Friedrich Gauss for the probability.</p>
 </section>
 <section id="example">
 <h3>Example<a class="headerlink" href="#example" title="Link to this heading"></a></h3>
@@ -195,6 +195,20 @@ handled without needing to modify the original mixture.</p>
 simulation-based inference (SBI) generating samples, a EM algorithm
 identifying the GMM parameters, but applied to data with missing data or upper limits.</p>
 <p>This is a common case for photometric flux measurements in astronomy.</p>
+</section>
+<section id="lightgmm">
+<h3>LightGMM<a class="headerlink" href="#lightgmm" title="Link to this heading"></a></h3>
+<p>LightGMM is a extremely fast construction of a GMM for large data sets.
+It does not use the EM algorithm, but only KMeans.
+The initialisation is from random samples and then KMeans steps (n_iter max_iter) give the cluster centers.</p>
+<p>Regularized covariance matrices are computed from cluster members.
+The component weights are assigned either
+(proportional to number of cluster members),
+or if refine_weights=True, with a single E step,
+maximizing the training set likelihood.</p>
+<p>LightGMM achieves sub-100ms constructions for data sets
+with 50000 samples and ~15 features.
+See this benchmark: <a class="reference external" href="https://github.com/JohannesBuchner/GMM-benchmark">https://github.com/JohannesBuchner/GMM-benchmark</a></p>
 <section id="usage">
 <h4>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h4>
 <p>Read the full documentation at:</p>

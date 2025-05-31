@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>askcarl package &mdash; askcarl 0.1.0 documentation</title>
+  <title>askcarl package &mdash; askcarl 1.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
 
@@ -16,7 +16,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=01f34227"></script>
+        <script src="_static/documentation_options.js?v=fc837d61"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
@@ -38,7 +38,7 @@
             askcarl
           </a>
               <div class="version">
-                0.1.0
+                1.1.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -60,6 +60,10 @@
 <li class="toctree-l3"><a class="reference internal" href="#module-askcarl.gaussian">askcarl.gaussian module</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#askcarl.gaussian.pdfcdf"><code class="docutils literal notranslate"><span class="pre">pdfcdf()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#askcarl.gaussian.Gaussian"><code class="docutils literal notranslate"><span class="pre">Gaussian</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-askcarl.lightgmm">askcarl.lightgmm module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#askcarl.lightgmm.LightGMM"><code class="docutils literal notranslate"><span class="pre">LightGMM</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#module-askcarl.mixture">askcarl.mixture module</a><ul>
@@ -133,7 +137,6 @@ is a value (True) or a upper bound (False).</p></li>
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">askcarl.gaussian.</span></span><span class="sig-name descname"><span class="pre">Gaussian</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mean</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cov</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/gaussian.html#Gaussian"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.gaussian.Gaussian" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Multivariate Gaussians with support for upper limits and missing data.</p>
-<p>Initialize.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -251,6 +254,105 @@ is a value (True) or a upper bound (False).</p></li>
 </dd></dl>
 
 </section>
+<section id="module-askcarl.lightgmm">
+<span id="askcarl-lightgmm-module"></span><h2>askcarl.lightgmm module<a class="headerlink" href="#module-askcarl.lightgmm" title="Link to this heading"></a></h2>
+<p>A extremely fast-to-train GMM.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="askcarl.lightgmm.LightGMM">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">askcarl.lightgmm.</span></span><span class="sig-name descname"><span class="pre">LightGMM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_components</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">refine_weights</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{'init':</span> <span class="pre">'random',</span> <span class="pre">'max_iter':</span> <span class="pre">1,</span> <span class="pre">'n_init':</span> <span class="pre">1}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warm_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">covariance_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'full'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/lightgmm.html#LightGMM"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.lightgmm.LightGMM" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Wrapper which transforms KMeans results into a GMM.</p>
+<p>Initialise.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n_components</strong> (<em>int</em>) – number of Gaussian components.</p></li>
+<li><p><strong>refine_weights</strong> (<em>bool</em>) – whether to include a E step at the end.</p></li>
+<li><p><strong>init_kwargs</strong> (<em>dict</em>) – arguments passed to KMeans</p></li>
+<li><p><strong>warm_start</strong> (<em>bool</em>) – not supported, has to be False</p></li>
+<li><p><strong>covariance_type</strong> (<em>str</em>) – only “full” is supported</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="askcarl.lightgmm.LightGMM.fit">
+<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/lightgmm.html#LightGMM.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.lightgmm.LightGMM.fit" title="Link to this definition"></a></dt>
+<dd><p>Fit.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>X</strong> (<em>array</em>) – data, of shape (N, D)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="askcarl.lightgmm.LightGMM.to_sklearn">
+<span class="sig-name descname"><span class="pre">to_sklearn</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/lightgmm.html#LightGMM.to_sklearn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.lightgmm.LightGMM.to_sklearn" title="Link to this definition"></a></dt>
+<dd><p>Convert to a scikit-learn GaussianMixture object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>gmm</strong> – scikit-learn GaussianMixture</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="askcarl.lightgmm.LightGMM.score_samples">
+<span class="sig-name descname"><span class="pre">score_samples</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/lightgmm.html#LightGMM.score_samples"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.lightgmm.LightGMM.score_samples" title="Link to this definition"></a></dt>
+<dd><p>Compute score of samples.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>X</strong> (<em>array</em>) – data, of shape (N, D)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>logprob</strong> – log-probabilities, one entry for each entry in X, of shape (N)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="askcarl.lightgmm.LightGMM.score">
+<span class="sig-name descname"><span class="pre">score</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/lightgmm.html#LightGMM.score"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.lightgmm.LightGMM.score" title="Link to this definition"></a></dt>
+<dd><p>Compute score of samples.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>X</strong> (<em>array</em>) – data, of shape (N, D)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>logprob</strong> – average log-probabilities, one entry for each entry in X, of shape (N)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="askcarl.lightgmm.LightGMM.sample">
+<span class="sig-name descname"><span class="pre">sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">N</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/lightgmm.html#LightGMM.sample"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.lightgmm.LightGMM.sample" title="Link to this definition"></a></dt>
+<dd><p>Generate samples from model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>N</strong> (<em>int</em>) – number of samples</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>X</strong> – data, of shape (N, D)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
 <section id="module-askcarl.mixture">
 <span id="askcarl-mixture-module"></span><h2>askcarl.mixture module<a class="headerlink" href="#module-askcarl.mixture" title="Link to this heading"></a></h2>
 <p>Mixture of Gaussians.</p>
@@ -259,6 +361,15 @@ is a value (True) or a upper bound (False).</p></li>
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">askcarl.mixture.</span></span><span class="sig-name descname"><span class="pre">GaussianMixture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">weights</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">means</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">covs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/mixture.html#GaussianMixture"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.mixture.GaussianMixture" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Mixture of Gaussians.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>weights</strong> (<em>list</em>) – weight for each Gaussian component</p></li>
+<li><p><strong>means</strong> (<em>list</em>) – mean vector for each Gaussian component.</p></li>
+<li><p><strong>covs</strong> (<em>list</em>) – covariance matrix for each Gaussian component.</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="askcarl.mixture.GaussianMixture.weights">
 <span class="sig-name descname"><span class="pre">weights</span></span><a class="headerlink" href="#askcarl.mixture.GaussianMixture.weights" title="Link to this definition"></a></dt>
@@ -281,16 +392,6 @@ is a value (True) or a upper bound (False).</p></li>
 </dl>
 </dd></dl>
 
-<p>Initialize.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>weights</strong> (<em>list</em>) – weight for each Gaussian component</p></li>
-<li><p><strong>means</strong> (<em>list</em>) – mean vector for each Gaussian component.</p></li>
-<li><p><strong>covs</strong> (<em>list</em>) – covariance matrix for each Gaussian component.</p></li>
-</ul>
-</dd>
-</dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="askcarl.mixture.GaussianMixture.from_pypmc">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_pypmc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mix</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/mixture.html#GaussianMixture.from_pypmc"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.mixture.GaussianMixture.from_pypmc" title="Link to this definition"></a></dt>
