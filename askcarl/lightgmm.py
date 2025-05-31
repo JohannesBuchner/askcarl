@@ -207,7 +207,11 @@ def refine_weights_jax(X, means, precisions_cholesky):
 class LightGMM:
     """Wrapper which transforms KMeans results into a GMM."""
 
-    def __init__(self, n_components, refine_weights=True, init_kwargs=dict(n_init=1, max_iter=2, init='random'), warm_start=False, covariance_type='full'):
+    def __init__(
+        self, n_components, refine_weights=False,
+        init_kwargs=dict(n_init=1, max_iter=1, init='random'),
+        warm_start=False, covariance_type='full'
+    ):
         """Initialise.
 
         Parameters
@@ -242,11 +246,11 @@ class LightGMM:
     def _characterize_clusters(self, X):
         self.covariances_, well_defined = local_covariances(X, self.indices_, self.means_)
 
-        self.means_ = self.means_[well_defined,:]
-        self.covariances_ = self.covariances_[well_defined,:,:]
-        self.n_components_ = well_defined.sum()
-        if not well_defined.all():
-            print(f"stripping {(~well_defined).sum()} of K={len(well_defined)}, because of covariance issues")
+        for i in np.where(~well_defined)[0]:
+            js = np.where(well_defined)[0]
+            j = js[np.argmin(np.abs(js - i))]
+            self.covariances_[i] = self.covariances_[j]
+            print(f"setting covariance of component {i} with {j} to numerical issues")
 
         self.precisions_cholesky_ = _compute_precision_cholesky(self.covariances_, 'full')
         if self.refine_weights:
