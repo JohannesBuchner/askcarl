@@ -44,12 +44,12 @@ This is different to typical censored GMMs, which assume a common
 upper limit for all data (homogeneous) (`see here for example <https://github.com/tranbahien/Truncated-Censored-EM>`_).
 
 For these cases, askcarl implements evaluating the PDF and log-PDF of a mixture.
-askcarl does not implement finding the mixture parameters.
+Ingestion of GMM objects from scikit-learn, pypmc, gmmx and LightGMM are implemented.
 
 Just ask Carl Friedrich Gauss for the probability.
 
 Example
----------
+-------
 
 Lets take the Iris flower data set (dots), and learn GMM as in
 this `scikit-learn example <https://scikit-learn.org/stable/auto_examples/mixture/plot_gmm_covariances.html>`_::
@@ -124,6 +124,24 @@ simulation-based inference (SBI) generating samples, a EM algorithm
 identifying the GMM parameters, but applied to data with missing data or upper limits.
 
 This is a common case for photometric flux measurements in astronomy.
+
+LightGMM
+--------
+
+LightGMM is a extremely fast construction of a GMM for large data sets.
+It does not use the EM algorithm, but only KMeans.
+The initialisation is from random samples and then KMeans steps (n_iter max_iter) give the cluster centers.
+
+Regularized covariance matrices are computed from cluster members. 
+The component weights are assigned either
+(proportional to number of cluster members),
+or if refine_weights=True, with a single E step,
+maximizing the training set likelihood.
+
+LightGMM achieves sub-100ms constructions for data sets 
+with 50000 samples and ~15 features.
+See this benchmark: https://github.com/JohannesBuchner/GMM-benchmark
+
 
 Usage
 ^^^^^
