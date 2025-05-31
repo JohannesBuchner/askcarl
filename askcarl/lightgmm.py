@@ -203,11 +203,86 @@ def refine_weights_jax(X, means, precisions_cholesky):
     weights = resp.sum(axis=0) / X.shape[0]
     return weights / weights.sum()
 
+def diagonally_spaced_centroids(X, n_components, n_attempts=5, rng=np.random):
+    N, D = X.shape
+    projections = np.sum(X, axis=1)
+    proj_min, proj_max = projections.min(), projections.max()
+    target_dist = (proj_max - proj_min) / n_components
+    centroids = np.empty((n_components, D))
+    accepted_proj = np.zeros(n_components) - 100
+    num_accepted = 0
+    assert n_attempts >= 1
+
+    for attempt in range(n_attempts):
+        # Minimum allowed distance scales linearly with attempt number
+        min_dist = target_dist * (1 - attempt / n_attempts)
+        for _ in range(num_accepted, n_components):
+            idx = rng.randint(N)
+            p = projections[idx]
+            if np.all(np.abs(p - accepted_proj) > min_dist):
+                centroids[num_accepted] = X[idx]
+                accepted_proj[num_accepted] = p
+                num_accepted += 1
+        if num_accepted >= n_components:
+            break
+
+    while num_accepted < n_components:
+        idx = rng.randint(N)
+        centroids[num_accepted] = X[idx]
+        num_accepted += 1
+    return centroids
+
+def centroids_furthestofK_diag_whitened(X, n_components, rng=np.random, K=10):
+    N, D = X.shape
+    centroids = np.empty((n_components, D))
+    centroids[0] = X[rng.randint(N),:]
+    centroids[0] -= centroids[0].mean()
+
+    for i in range(1, n_components):
+        idx = rng.randint(N, size=K)
+        proj_cands = X[idx] - X[idx].mean(axis=1, keepdims=True)
+        sqdist = np.sum((proj_cands[:,None,:] - centroids[:i,:][None,:,:])**2, axis=2)
+        assert sqdist.shape == (K, i)
+        d = np.min(sqdist, axis=1)
+        assert d.shape == (K,)
+        j = np.argmax(d)
+        centroids[i] = X[idx[j],:]
+        centroids[i] -= centroids[i].mean()
+    return centroids
+
+
+def diagonally_spaced_centroids_bestof2(X, n_components, rng=np.random):
+    N, D = X.shape
+    centroids = np.empty((n_components, D))
+    accepted_proj = np.zeros(n_components) + np.inf
+
+    for i in range(n_components):
+        idx1 = rng.randint(N)
+        X1 = X[idx1]
+        p1 = X1.sum()
+        d1 = np.min(np.abs(p1 - accepted_proj))
+        idx2 = rng.randint(N)
+        X2 = X[idx2]
+        p2 = X2.sum()
+        d2 = np.min(np.abs(p2 - accepted_proj))
+        if d1 < d2:
+            centroids[i] = X1
+            accepted_proj[i] = p1
+        else:
+            centroids[i] = X2
+            accepted_proj[i] = p2
+    return centroids
+
+
 
 class LightGMM:
     """Wrapper which transforms KMeans results into a GMM."""
 
-    def __init__(self, n_components, refine_weights=True, init_kwargs=dict(n_init=1, max_iter=2, init='random'), warm_start=False, covariance_type='full'):
+    def __init__(
+        self, n_components, refine_weights=False,
+        init_kwargs=dict(n_init=1, max_iter=1, init='random'),
+        warm_start=False, covariance_type='full', min_weight=0,
+    ):
         """Initialise.
 
         Parameters
@@ -222,6 +297,8 @@ class LightGMM:
             not supported, has to be False
         covariance_type: str
             only "full" is supported
+        min_weight: float
+            smallest weight allowed.
         """
         assert not warm_start
         assert covariance_type == 'full'
@@ -231,9 +308,28 @@ class LightGMM:
         self.init_kwargs = init_kwargs
         self.n_components = n_components
         self.initialised = False
+        self.min_weight = min_weight
 
     def _cluster(self, X):
-        self.kmeans_ = KMeans(**self.init_kwargs).fit(X)
+        if self.init_kwargs['init'] == 'spaced-diagonal':
+            init = diagonally_spaced_centroids(X, self.n_components)
+            init_kwargs = dict(self.init_kwargs)
+            init_kwargs.update(dict(init=init))
+        elif self.init_kwargs['init'] == 'spaced-diagonal-bestof2':
+            init = diagonally_spaced_centroids_bestof2(X, self.n_components)
+            init_kwargs = dict(self.init_kwargs)
+            init_kwargs.update(dict(init=init))
+        elif self.init_kwargs['init'] == 'best-of-10-diag':
+            init = centroids_furthestofK_diag_whitened(X, self.n_components)
+            init_kwargs = dict(self.init_kwargs)
+            init_kwargs.update(dict(init=init))
+        elif self.init_kwargs['init'] == 'best-of-K-diag':
+            init = centroids_furthestofK_diag_whitened(X, self.n_components, K=self.init_kwargs['max_iter'])
+            init_kwargs = dict(self.init_kwargs)
+            init_kwargs.update(dict(init=init))
+        else:
+            init_kwargs = self.init_kwargs
+        self.kmeans_ = KMeans(**init_kwargs).fit(X)
         self.initialised = True
         self.means_ = np.array(self.kmeans_.cluster_centers_)
         self.labels_ = self.kmeans_.labels_
@@ -242,15 +338,20 @@ class LightGMM:
     def _characterize_clusters(self, X):
         self.covariances_, well_defined = local_covariances(X, self.indices_, self.means_)
 
-        self.means_ = self.means_[well_defined,:]
-        self.covariances_ = self.covariances_[well_defined,:,:]
-        self.n_components_ = well_defined.sum()
-        if not well_defined.all():
-            print(f"stripping {(~well_defined).sum()} of K={len(well_defined)}, because of covariance issues")
+        for i in np.where(~well_defined)[0]:
+            js = np.where(well_defined)[0]
+            j = js[np.argmin(np.abs(js - i))]
+            self.covariances_[i] = self.covariances_[j]
+            print(f"setting covariance of component {i} with {j} to numerical issues")
 
         self.precisions_cholesky_ = _compute_precision_cholesky(self.covariances_, 'full')
-        if self.refine_weights:
-            self.weights_ = refine_weights_jax(X, self.means_, self.precisions_cholesky_)
+        if self.refine_weights is None:
+            self.weights_ = jnp.ones(self.n_components) / self.n_components
+        elif self.refine_weights:
+            if self.min_weight > 0:
+                self.weights_ = jnp.clip(refine_weights_jax(X, self.means_, self.precisions_cholesky_), self.min_weight, None)
+            else:
+                self.weights_ = refine_weights_jax(X, self.means_, self.precisions_cholesky_)
         else:
             weights_int = jnp.bincount(self.labels_, minlength=self.n_components)
             weights = weights_int / float(weights_int.sum())
