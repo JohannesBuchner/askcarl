@@ -8,6 +8,8 @@ from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
 from sklearn.mixture._gaussian_mixture import _compute_precision_cholesky
 
+__all__ = ["LightGMM"]
+
 
 def is_positive_definite(cov, tol=1e-10, condthresh=1e6):
     """Check that the covariance matrix is well behaved.
@@ -29,25 +31,6 @@ def is_positive_definite(cov, tol=1e-10, condthresh=1e6):
     cond = np.linalg.cond(cov)
     is_invertible = cond < condthresh
     return is_invertible and np.all(np.linalg.eigvalsh(cov) > tol)
-
-
-def compute_covariance(X):
-    """Compute covariance of clusters.
-
-    Parameters
-    ----------
-    X: array
-        data. shape (N, D)
-
-    Returns
-    -------
-    covariance: array
-        covariance matrix
-    """
-    mean = jnp.mean(X, axis=0)
-    centered = X - mean
-    cov = (centered.T @ centered) / (X.shape[0] - 1)
-    return cov
 
 
 def local_covariances(X, indices, centroids):

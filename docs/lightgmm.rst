@@ -23,6 +23,12 @@ The GMM component weights are assigned proportional to number of cluster members
 Alternatively, if refine_weights=True, with a single E step is performed
 for maximizing the training set likelihood.
 
+Requirements
+------------
+
+You need scikit-learn and jax installed.
+These are not installed by default with askcarl.
+
 Usage
 -----
 
