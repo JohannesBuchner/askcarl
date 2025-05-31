@@ -10,6 +10,7 @@ Welcome to askcarl's documentation!
    contributing
    issues
    modules
+   lightgmm
 
 .. include:: ../README.rst
 
