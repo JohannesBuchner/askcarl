@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>askcarl package &mdash; askcarl 1.1.0 documentation</title>
+  <title>askcarl package &mdash; askcarl 1.2.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
 
@@ -16,7 +16,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=fc837d61"></script>
+        <script src="_static/documentation_options.js?v=ca842793"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
@@ -39,7 +39,7 @@
             askcarl
           </a>
               <div class="version">
-                1.1.0
+                1.2.1
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -278,11 +278,14 @@ is a value (True) or a upper bound (False).</p></li>
 </dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="askcarl.lightgmm.LightGMM.fit">
-<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/lightgmm.html#LightGMM.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.lightgmm.LightGMM.fit" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_weight</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/lightgmm.html#LightGMM.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.lightgmm.LightGMM.fit" title="Link to this definition"></a></dt>
 <dd><p>Fit.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>X</strong> (<em>array</em>) – data, of shape (N, D)</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> (<em>array</em>) – data, of shape (N, D)</p></li>
+<li><p><strong>sample_weight</strong> (<em>array</em>) – weights of observations. shape (N,)</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -320,11 +323,14 @@ is a value (True) or a upper bound (False).</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="askcarl.lightgmm.LightGMM.score">
-<span class="sig-name descname"><span class="pre">score</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/lightgmm.html#LightGMM.score"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.lightgmm.LightGMM.score" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">score</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_weight</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/lightgmm.html#LightGMM.score"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.lightgmm.LightGMM.score" title="Link to this definition"></a></dt>
 <dd><p>Compute score of samples.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>X</strong> (<em>array</em>) – data, of shape (N, D)</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> (<em>array</em>) – data, of shape (N, D)</p></li>
+<li><p><strong>sample_weight</strong> (<em>array</em>) – weights of observations. shape (N,)</p></li>
+</ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><strong>logprob</strong> – average log-probabilities, one entry for each entry in X, of shape (N)</p>

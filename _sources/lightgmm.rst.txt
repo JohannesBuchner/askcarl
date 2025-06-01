@@ -7,6 +7,12 @@ LightGMM
 
 LightGMM is a extremely fast construction of a GMM for large data sets.
 
+Features:
+
+* based on jax
+* supports weighted observations
+* can be converted into a scikit-learn GaussianMixture
+
 Method
 ------
 
