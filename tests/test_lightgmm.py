@@ -9,7 +9,8 @@ import askcarl.mixture
 def test_weights():
     N = 1000
     D = 2
-    X = np.random.normal(size=(N, D))
+    X_orig = np.random.normal(size=(N, D))
+    X = X_orig[np.argsort(X_orig[:,0]),:]
     gmm = LightGMM(1, init_kwargs=dict(n_init=1, max_iter=1000, init='random', random_state=42))
     gmm.fit(X)
 
