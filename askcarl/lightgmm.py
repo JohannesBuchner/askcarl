@@ -33,7 +33,7 @@ def is_positive_definite(cov, tol=1e-10, condthresh=1e6):
     return is_invertible and np.all(np.linalg.eigvalsh(cov) > tol)
 
 
-def local_covariances(X, indices, centroids):
+def local_covariances(X, indices, centroids, sample_weight=None):
     """Compute covariance of clusters.
 
     Parameters
@@ -44,6 +44,8 @@ def local_covariances(X, indices, centroids):
         list of selectors on X, one boolean array for each cluster. shape (K, N)
     centroids: array
         list of cluster centers. shape (K, D)
+    sample_weight: array
+        weights. shape (N,)
 
     Returns
     -------
@@ -54,7 +56,7 @@ def local_covariances(X, indices, centroids):
     covariances = np.empty((len(centroids), X.shape[1], X.shape[1]))
     for i, idx in enumerate(indices):
         neighbors = X[idx]
-        cov = np.cov(neighbors, rowvar=False)
+        cov = np.cov(neighbors, rowvar=False, aweights=sample_weight)
         if len(neighbors) > X.shape[1] and is_positive_definite(cov):
             # verify that the cov is reliable:
             # cholesky(cov, lower=True)
@@ -63,7 +65,11 @@ def local_covariances(X, indices, centroids):
             well_defined[i] = True
         elif len(neighbors) > X.shape[1]:
             # let's try with a diagonal covariance
-            cov = np.diag(np.var(neighbors, axis=0))
+            if sample_weight is None:
+                cov = np.diag(np.var(neighbors, axis=0))
+            else:
+                average = np.average(neighbors, weights=sample_weight, axis=0)
+                cov = np.diag(np.average((neighbors - average)**2, weights=sample_weight, axis=0))
             if is_positive_definite(cov):
                 # cholesky(cov, lower=True)
                 # np.linalg.inv(cov)
@@ -153,7 +159,7 @@ def log_prob_gmm(X, centroids, covariances, weights):
 
 
 @jax.jit
-def refine_weights_jax(X, means, precisions_cholesky):
+def refine_weights_jax(X, means, precisions_cholesky, sample_weight=None):
     """Derive weights for Gaussian mixture.
 
     Parameters
@@ -164,6 +170,8 @@ def refine_weights_jax(X, means, precisions_cholesky):
         list of component centers, of shape (K, D)
     precisions_cholesky: array
         list of component precision matrices, of shape (K, D, D)
+    sample_weight: array
+        weights. shape (N,)
 
     Returns
     -------
@@ -183,7 +191,7 @@ def refine_weights_jax(X, means, precisions_cholesky):
     resp = jnp.exp(log_resp)
 
     # Compute new weights
-    weights = resp.sum(axis=0) / X.shape[0]
+    weights = resp.average(axis=0, weights=sample_weight)
     return weights / weights.sum()
 
 
@@ -219,15 +227,15 @@ class LightGMM:
         self.n_components = n_components
         self.initialised = False
 
-    def _cluster(self, X):
-        self.kmeans_ = KMeans(**self.init_kwargs).fit(X)
+    def _cluster(self, X, sample_weight=None):
+        self.kmeans_ = KMeans(**self.init_kwargs).fit(X, sample_weight=sample_weight)
         self.initialised = True
         self.means_ = np.array(self.kmeans_.cluster_centers_)
         self.labels_ = self.kmeans_.labels_
         self.indices_ = self.kmeans_.labels_[None,:] == jnp.arange(self.n_components)[:,None]
 
-    def _characterize_clusters(self, X):
-        self.covariances_, well_defined = local_covariances(X, self.indices_, self.means_)
+    def _characterize_clusters(self, X, sample_weight=None):
+        self.covariances_, well_defined = local_covariances(X, self.indices_, self.means_, sample_weight=sample_weight)
 
         for i in np.where(~well_defined)[0]:
             js = np.where(well_defined)[0]
@@ -237,33 +245,24 @@ class LightGMM:
 
         self.precisions_cholesky_ = _compute_precision_cholesky(self.covariances_, 'full')
         if self.refine_weights:
-            self.weights_ = refine_weights_jax(X, self.means_, self.precisions_cholesky_)
+            self.weights_ = refine_weights_jax(X, self.means_, self.precisions_cholesky_, sample_weight=sample_weight)
         else:
-            weights_int = jnp.bincount(self.labels_, minlength=self.n_components)
+            weights_int = jnp.bincount(self.labels_, weights=sample_weight, minlength=self.n_components)
             weights = weights_int / float(weights_int.sum())
             self.weights_ = weights
 
-    def _strip_zero_weight_components(self):
-        keep = self.weights_ > 0
-        if not keep.all():
-            print(f"stripping {(~keep).sum()} of K={len(keep)}, because of zero weight: {self.weights_.min()}")
-        self.means_ = self.means_[keep,:]
-        self.covariances_ = self.covariances_[keep,:,:]
-        self.precisions_cholesky_ = self.precisions_cholesky_[keep,:,:]
-        self.weights_ = self.weights_[keep]
-        self.n_components_ = keep.sum()
-
-    def fit(self, X):
+    def fit(self, X, sample_weight=None):
         """Fit.
 
         Parameters
         ----------
         X: array
             data, of shape (N, D)
+        sample_weight: array
+            weights of observations. shape (N,)
         """
-        self._cluster(X)
-        self._characterize_clusters(X)
-        # self._strip_zero_weight_components()
+        self._cluster(X, sample_weight=sample_weight)
+        self._characterize_clusters(X, sample_weight=sample_weight)
         self.converged_ = True
         self.n_iter_ = 0
 
@@ -307,20 +306,22 @@ class LightGMM:
         """
         return log_prob_gmm(X, self.means_, self.covariances_, self.weights_)
 
-    def score(self, X):
+    def score(self, X, sample_weight=None):
         """Compute score of samples.
 
         Parameters
         ----------
         X: array
             data, of shape (N, D)
+        sample_weight: array
+            weights of observations. shape (N,)
 
         Returns
         -------
         logprob: float
             average log-probabilities, one entry for each entry in X, of shape (N)
         """
-        return self.score_samples(X).mean()
+        return np.average(self.score_samples(X), weights=sample_weight)
 
     def sample(self, N):
         """Generate samples from model.

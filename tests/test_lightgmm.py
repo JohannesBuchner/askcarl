@@ -4,7 +4,22 @@ from sklearn.mixture import GaussianMixture
 from askcarl.lightgmm import LightGMM
 
 import askcarl.mixture
+
+
+def test_weights():
+    N = 1000
+    D = 2
+    X = np.random.normal(size=(N, D))
+    gmm = LightGMM(1, init_kwargs=dict(n_init=1, max_iter=1000, init='random', random_state=42))
+    gmm.fit(X)
+
+    gmm2 = LightGMM(1, init_kwargs=dict(n_init=1, max_iter=1000, init='random', random_state=42))
+    gmm2.fit(X, np.ones(X.shape[0]))
     
+    np.testing.assert_allclose(gmm.means_, gmm2.means_)
+    np.testing.assert_allclose(gmm.precisions_cholesky_, gmm2.precisions_cholesky_)
+    np.testing.assert_allclose(gmm.covariances_, gmm2.covariances_)
+
 def test_single_gauss():
     np.random.seed(234)
     N = 100000
@@ -73,3 +88,4 @@ def test_two_gauss():
         gmm_ref.fit(X)
         score_ref = gmm_ref.score(X)
         np.testing.assert_allclose(score, score_ref)
+
