@@ -20,6 +20,16 @@ def test_weights():
     np.testing.assert_allclose(gmm.precisions_cholesky_, gmm2.precisions_cholesky_)
     np.testing.assert_allclose(gmm.covariances_, gmm2.covariances_)
 
+    gmm4 = LightGMM(1, init_kwargs=dict(n_init=1, max_iter=1000, init='random', random_state=42))
+    gmm4.fit(X[:500])
+    gmm3 = LightGMM(1, init_kwargs=dict(n_init=1, max_iter=1000, init='random', random_state=42))
+    gmm3.fit(X, (np.arange(X.shape[0]) < 500)*1.0)
+    
+    np.testing.assert_allclose(gmm3.means_, gmm4.means_)
+    np.testing.assert_allclose(gmm3.precisions_cholesky_, gmm4.precisions_cholesky_)
+    np.testing.assert_allclose(gmm3.covariances_, gmm4.covariances_)
+    
+
 def test_single_gauss():
     np.random.seed(234)
     N = 100000
