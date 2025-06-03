@@ -1,6 +1,7 @@
 """Multivariate Gaussians with support for upper limits and missing data."""
 
 import numpy as np
+from scipy.linalg import solve
 from scipy.stats import multivariate_normal
 
 from .utils import cov_to_prec_cholesky, mvn_logpdf, mvn_pdf
@@ -145,7 +146,7 @@ class Gaussian:
 
                 cov_exact = cov
                 prec_chol_exact = self.prec
-                inv_cov_exact = None
+                cov_exact_sol = None
 
                 # If there are no upper bounds, the conditional covariance is the original one
                 conditional_cov = cov_exact
@@ -167,22 +168,21 @@ class Gaussian:
 
                 # Extract values from x
                 cov_exact = cov[np.ix_(exact_idx, exact_idx)]  # Covariance for exact values
-                inv_cov_exact = np.linalg.inv(cov_exact)
+                cov_exact_sol = solve(cov_exact, cov_cross, assume_a='pos')
+                conditional_cov = cov_upper - cov_cross.T @ cov_exact_sol
                 try:
                     prec_chol_exact = cov_to_prec_cholesky(cov_exact)
                 except ValueError:
                     prec_chol_exact = None
-                conditional_cov = cov_upper - cov_cross.T @ inv_cov_exact @ cov_cross
                 assert conditional_cov.shape == (n_upper, n_upper)
 
             # Create the conditional multivariate normal distributions
-            # print("cov:", conditional_cov)
-            # Conditional MVN
             if n_upper > 0:
                 rv = multivariate_normal(mean=np.zeros(len(conditional_cov)), cov=conditional_cov)
             else:
                 rv = None
-            self.rvs[key] = cov_cross, cov_exact, inv_cov_exact, prec_chol_exact, rv, exact_idx, upper_idx, n_exact, n_upper, mu_exact, mu_upper
+            self.rvs[key] = cov_cross, cov_exact, cov_exact_sol, prec_chol_exact, \
+                rv, exact_idx, upper_idx, n_exact, n_upper, mu_exact, mu_upper
 
         return self.rvs[key]
 
@@ -201,7 +201,7 @@ class Gaussian:
         Returns:
         - prob: The combined PDF and CDF value.
         """
-        cov_cross, cov_exact, inv_cov_exact, prec_chol_exact, dist_conditional, \
+        cov_cross, cov_exact, cov_exact_sol, prec_chol_exact, dist_conditional, \
             exact_idx, upper_idx, n_exact, n_upper, mu_exact, mu_upper = \
             self.get_conditional_rv(mask)
         x_exact = x[:,exact_idx]  # Known values for the PDF
@@ -209,9 +209,9 @@ class Gaussian:
         # Compute quantities for upper bound dimensions
         if n_upper > 0:
             x_upper = x[:,upper_idx]  # Upper bounds for the CDF
-            newcov = np.einsum('ji,jk,mk->mi', cov_cross, inv_cov_exact, x_exact - mu_exact.reshape((1, -1)))
+            newcov = (x_exact - mu_exact[None, :]) @ cov_exact_sol
+            conditional_mean = mu_upper[None, :] + newcov
             assert newcov.shape == (len(x), n_upper), (newcov.shape, (len(x), n_upper))
-            conditional_mean = mu_upper[None,:] + newcov
             assert conditional_mean.shape == ((len(x), n_upper)), (conditional_mean.shape, ((len(x), n_upper)))
             assert x_upper.shape == ((len(x), n_upper)), (x_upper.shape, ((len(x), n_upper)))
         else:
@@ -219,7 +219,8 @@ class Gaussian:
             conditional_mean = mu_exact.reshape((1, -1))
             x_upper = None
 
-        return n_upper, n_exact, cov_cross, cov_exact, inv_cov_exact, prec_chol_exact, x_exact, x_upper, mu_exact, mu_upper, conditional_mean, dist_conditional
+        return n_upper, n_exact, cov_cross, cov_exact, cov_exact_sol, prec_chol_exact, \
+            x_exact, x_upper, mu_exact, mu_upper, conditional_mean, dist_conditional
 
     def conditional_pdf(self, x, mask=Ellipsis):
         """
@@ -238,7 +239,8 @@ class Gaussian:
         pdf: array
             Probability density. One value for each `x`.
         """
-        n_upper, n_exact, cov_cross, cov_exact, inv_cov_exact, prec_chol_exact, x_exact, x_upper, mu_exact, mu_upper, conditional_mean, dist_conditional = \
+        n_upper, n_exact, cov_cross, cov_exact, cov_exact_sol, prec_chol_exact, \
+            x_exact, x_upper, mu_exact, mu_upper, conditional_mean, dist_conditional = \
             self._prepare_conditional_pdf(x=x, mask=mask)
 
         # Compute the CDF for the upper bounds
@@ -253,7 +255,7 @@ class Gaussian:
                 # trivial case: CDF only
                 pdf_value = 1
             else:
-                if prec_chol_exact is None or True:
+                if prec_chol_exact is None:
                     pdf_value = multivariate_normal(mu_exact, cov_exact).pdf(x_exact)
                 else:
                     pdf_value = mvn_pdf(x_exact, mu_exact, prec_chol_exact)
