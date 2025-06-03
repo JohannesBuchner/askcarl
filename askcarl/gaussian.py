@@ -3,6 +3,8 @@
 import numpy as np
 from scipy.stats import multivariate_normal
 
+from .utils import cov_to_prec_cholesky, mvn_logpdf, mvn_pdf
+
 
 def pdfcdf(x, mask, mean, cov):
     """
@@ -88,13 +90,19 @@ class Gaussian:
         covariance matrix of the multivariate normal distribution.
     """
 
-    def __init__(self, mean, cov):
+    def __init__(self, mean, cov, prec=None):
         self.ndim = len(mean)
         self.powers = 2**np.arange(self.ndim)
+        self.allpowers = 2**self.ndim - 1
+        assert self.allpowers == self.powers.sum()
         self.mean = mean
         self.cov = cov
+        self.prec = prec
         assert mean.shape == (self.ndim,), (mean.shape,)
         assert cov.shape == (self.ndim, self.ndim), (cov.shape, self.ndim)
+        if prec is not None:
+            assert prec.shape == (self.ndim, self.ndim), (prec.shape, self.ndim)
+            assert np.isfinite(prec).all(), cov
         assert np.isfinite(mean).all(), mean
         assert np.isfinite(cov).all(), cov
         self.rvs = {}
@@ -120,30 +128,52 @@ class Gaussian:
             Multivariate Normal Distribution of the upper bound dimensions,
             conditioned with `mask`.
         """
-        key = self.powers[mask].sum()
+        if mask is Ellipsis:
+            key = self.allpowers
+        else:
+            key = self.powers[mask].sum()
+            assert mask.shape == (self.ndim,), (self.ndim, mask.shape)
         if key not in self.rvs:
             cov = self.cov
-            exact_idx, = np.where(mask)  # Indices of exact values (PDF)
-            upper_idx, = np.where(~mask)  # Indices of upper bounds (CDF)
-            n_exact = len(exact_idx)
-            n_upper = len(upper_idx)
+            if mask is Ellipsis:
+                n_exact = self.ndim
+                n_upper = 0
+                exact_idx = np.arange(self.ndim)
+                upper_idx = np.empty(0)
+                mu_exact = self.mean[exact_idx]
+                mu_upper = np.empty(0)
 
-            # Extract values from x
-            cov_exact = cov[np.ix_(exact_idx, exact_idx)]  # Covariance for exact values
-            cov_upper = cov[np.ix_(upper_idx, upper_idx)]  # Covariance for upper bounds
-            cov_cross = cov[np.ix_(exact_idx, upper_idx)]  # Cross-covariance between exact and upper bounds
+                cov_exact = cov
+                prec_chol_exact = self.prec
+                inv_cov_exact = None
 
-            # Compute the conditional mean and covariance as a function of the upper bounds dimensions
-            # this is conditioned at the position of the exact coordinates.
-            if n_upper > 0:
+                # If there are no upper bounds, the conditional covariance is the original one
+                conditional_cov = cov_exact
+                cov_cross = None
+            else:
+                exact_idx, = np.where(mask)  # Indices of exact values (PDF)
+                upper_idx, = np.where(~mask)  # Indices of upper bounds (CDF)
+                n_exact = len(exact_idx)
+                n_upper = len(upper_idx)
+
+                # Partition mean and covariance matrix accordingly
+                mu_exact = self.mean[exact_idx]  # Mean for exact values
+                mu_upper = self.mean[upper_idx]  # Mean for upper bounds
+
+                # Compute the conditional mean and covariance as a function of the upper bounds dimensions
+                # this is conditioned at the position of the exact coordinates.
+                cov_upper = cov[np.ix_(upper_idx, upper_idx)]  # Covariance for upper bounds
+                cov_cross = cov[np.ix_(exact_idx, upper_idx)]  # Cross-covariance between exact and upper bounds
+
+                # Extract values from x
+                cov_exact = cov[np.ix_(exact_idx, exact_idx)]  # Covariance for exact values
                 inv_cov_exact = np.linalg.inv(cov_exact)
-                assert inv_cov_exact.shape == (n_exact, n_exact)
+                try:
+                    prec_chol_exact = cov_to_prec_cholesky(cov_exact)
+                except ValueError:
+                    prec_chol_exact = None
                 conditional_cov = cov_upper - cov_cross.T @ inv_cov_exact @ cov_cross
                 assert conditional_cov.shape == (n_upper, n_upper)
-            else:
-                # If there are no upper bounds, the conditional covariance is the original one
-                inv_cov_exact = None
-                conditional_cov = cov_exact
 
             # Create the conditional multivariate normal distributions
             # print("cov:", conditional_cov)
@@ -152,7 +182,7 @@ class Gaussian:
                 rv = multivariate_normal(mean=np.zeros(len(conditional_cov)), cov=conditional_cov)
             else:
                 rv = None
-            self.rvs[key] = cov_cross, cov_exact, inv_cov_exact, rv
+            self.rvs[key] = cov_cross, cov_exact, inv_cov_exact, prec_chol_exact, rv, exact_idx, upper_idx, n_exact, n_upper, mu_exact, mu_upper
 
         return self.rvs[key]
 
@@ -171,38 +201,25 @@ class Gaussian:
         Returns:
         - prob: The combined PDF and CDF value.
         """
-        mean = self.mean
-        if mask is Ellipsis:
-            del mask
-            mask = np.ones(len(mean), dtype=bool)
-        assert mask.shape == (self.ndim,), (self.ndim, mask.shape)
-
-        cov_cross, cov_exact, inv_cov_exact, dist_conditional = self.get_conditional_rv(mask)
-        exact_idx, = np.where(mask)  # Indices of exact values (PDF)
-        upper_idx, = np.where(~mask)  # Indices of upper bounds (CDF)
-        n_exact = len(exact_idx)
-        n_upper = len(upper_idx)
-
-        # Partition mean and covariance matrix accordingly
-        mu_exact = mean[exact_idx]  # Mean for exact values
-        mu_upper = mean[upper_idx]  # Mean for upper bounds
-
-        # Extract values from x
+        cov_cross, cov_exact, inv_cov_exact, prec_chol_exact, dist_conditional, \
+            exact_idx, upper_idx, n_exact, n_upper, mu_exact, mu_upper = \
+            self.get_conditional_rv(mask)
         x_exact = x[:,exact_idx]  # Known values for the PDF
-        x_upper = x[:,upper_idx]  # Upper bounds for the CDF
 
-        # Compute the conditional mean for upper bound dimensions
+        # Compute quantities for upper bound dimensions
         if n_upper > 0:
+            x_upper = x[:,upper_idx]  # Upper bounds for the CDF
             newcov = np.einsum('ji,jk,mk->mi', cov_cross, inv_cov_exact, x_exact - mu_exact.reshape((1, -1)))
             assert newcov.shape == (len(x), n_upper), (newcov.shape, (len(x), n_upper))
             conditional_mean = mu_upper[None,:] + newcov
             assert conditional_mean.shape == ((len(x), n_upper)), (conditional_mean.shape, ((len(x), n_upper)))
+            assert x_upper.shape == ((len(x), n_upper)), (x_upper.shape, ((len(x), n_upper)))
         else:
             # If there are no upper bounds, the conditional mean and cov are just the original ones
             conditional_mean = mu_exact.reshape((1, -1))
+            x_upper = None
 
-        assert x_upper.shape == ((len(x), n_upper)), (x_upper.shape, ((len(x), n_upper)))
-        return n_upper, n_exact, cov_cross, cov_exact, inv_cov_exact, x_exact, x_upper, mu_exact, mu_upper, conditional_mean, dist_conditional
+        return n_upper, n_exact, cov_cross, cov_exact, inv_cov_exact, prec_chol_exact, x_exact, x_upper, mu_exact, mu_upper, conditional_mean, dist_conditional
 
     def conditional_pdf(self, x, mask=Ellipsis):
         """
@@ -221,19 +238,25 @@ class Gaussian:
         pdf: array
             Probability density. One value for each `x`.
         """
-        n_upper, n_exact, cov_cross, cov_exact, inv_cov_exact, x_exact, x_upper, mu_exact, mu_upper, conditional_mean, dist_conditional = \
+        n_upper, n_exact, cov_cross, cov_exact, inv_cov_exact, prec_chol_exact, x_exact, x_upper, mu_exact, mu_upper, conditional_mean, dist_conditional = \
             self._prepare_conditional_pdf(x=x, mask=mask)
 
         # Compute the CDF for the upper bounds
         if n_upper == 0:
             # trivial case: PDF only
-            cdf_value = multivariate_normal(np.zeros(self.ndim), self.cov).pdf(x - self.mean.reshape((1, -1)))
+            if self.prec is not None:
+                cdf_value = mvn_logpdf(x, self.mean, self.prec)
+            else:
+                cdf_value = multivariate_normal(np.zeros(self.ndim), self.cov).pdf(x - self.mean.reshape((1, -1)))
         else:
             if n_exact == 0:
                 # trivial case: CDF only
                 pdf_value = 1
             else:
-                pdf_value = multivariate_normal(mu_exact, cov_exact).pdf(x_exact)
+                if prec_chol_exact is None or True:
+                    pdf_value = multivariate_normal(mu_exact, cov_exact).pdf(x_exact)
+                else:
+                    pdf_value = mvn_pdf(x_exact, mu_exact, prec_chol_exact)
             cdf_value = pdf_value * dist_conditional.cdf(x_upper - conditional_mean)
 
         return cdf_value
@@ -255,13 +278,16 @@ class Gaussian:
         logpdf: array
             logarithm of the probability density. One value for each `x`.
         """
-        n_upper, n_exact, cov_cross, cov_exact, inv_cov_exact, x_exact, x_upper, mu_exact, mu_upper, conditional_mean, dist_conditional = \
+        n_upper, n_exact, cov_cross, cov_exact, inv_cov_exact, prec_chol_exact, x_exact, x_upper, mu_exact, mu_upper, conditional_mean, dist_conditional = \
             self._prepare_conditional_pdf(x=x, mask=mask)
 
         # Compute the CDF for the upper bounds
         if n_upper == 0:
             # trivial case: PDF only
-            logcdf_value = multivariate_normal(np.zeros(self.ndim), self.cov).logpdf(x - self.mean.reshape((1, -1)))
+            if self.prec is not None:
+                logcdf_value = mvn_logpdf(x, self.mean, self.prec)
+            else:
+                logcdf_value = multivariate_normal(np.zeros(self.ndim), self.cov).logpdf(x - self.mean.reshape((1, -1)))
         else:
             if n_exact == 0:
                 # trivial case: CDF only

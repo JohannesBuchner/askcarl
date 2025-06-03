@@ -10,27 +10,7 @@ from sklearn.mixture._gaussian_mixture import _compute_precision_cholesky
 
 __all__ = ["LightGMM"]
 
-
-def is_positive_definite(cov, tol=1e-10, condthresh=1e6):
-    """Check that the covariance matrix is well behaved.
-
-    Parameters
-    ----------
-    cov: array
-        covariance matrix. shape (D, D)
-    tol: float
-        smallest eigvalsh value allowed
-    condthresh: float
-        minimum on matrix condition number
-
-    Returns
-    -------
-    bool
-        True if the matrix is invertable and positive definite
-    """
-    cond = np.linalg.cond(cov)
-    is_invertible = cond < condthresh
-    return is_invertible and np.all(np.linalg.eigvalsh(cov) > tol)
+from .utils import mvn_logpdf
 
 
 def local_covariances(X, indices, centroids, sample_weight=None):
@@ -52,82 +32,29 @@ def local_covariances(X, indices, centroids, sample_weight=None):
     covariances: array
         list of covariance matrices.
     """
-    well_defined = np.zeros(len(centroids), dtype=bool)
-    covariances = np.empty((len(centroids), X.shape[1], X.shape[1]))
+    N, D = centroids.shape
+    well_defined = np.zeros(N, dtype=bool)
+    covariances = np.empty((N, D, D))
     for i, idx in enumerate(indices):
+        if not idx.sum() > D + 1:
+            continue
         neighbors = X[idx]
-        cov = np.cov(neighbors, rowvar=False, aweights=sample_weight)
-        if len(neighbors) > X.shape[1] and is_positive_definite(cov):
-            # verify that the cov is reliable:
-            # cholesky(cov, lower=True)
-            # np.linalg.inv(cov)
-            # mark as good
-            well_defined[i] = True
-        elif len(neighbors) > X.shape[1]:
-            # let's try with a diagonal covariance
+        if not np.linalg.matrix_rank(neighbors) == D:
             if sample_weight is None:
-                cov = np.diag(np.var(neighbors, axis=0))
+                cov_diag = np.diag(np.var(neighbors, axis=0))
             else:
                 average = np.average(neighbors, weights=sample_weight, axis=0)
-                cov = np.diag(np.average((neighbors - average)**2, weights=sample_weight, axis=0))
-            if is_positive_definite(cov):
-                # cholesky(cov, lower=True)
-                # np.linalg.inv(cov)
-                # mark as good
-                well_defined[i] = True
+                cov_diag = np.average((neighbors - average)**2, weights=sample_weight, axis=0)
+            if np.all(cov_diag > 0):
+                continue
+            cov = np.diag(cov_diag)
+        else:
+            cov = np.cov(neighbors, rowvar=False, aweights=sample_weight)
+
+        # assert is_positive_definite(cov)
+        well_defined[i] = True
         covariances[i] = cov
     return covariances, well_defined
-
-
-def mvn_logpdf(X, mean, prec_chol):
-    """Compute log-prob of a Gaussian.
-
-    Parameters
-    ----------
-    X: array
-        data, of shape (N, D)
-    mean: array
-        Mean of Gaussian, of shape (D)
-    prec_chol: array
-        precision matrix, of shape (D, D)
-
-    Returns
-    -------
-    logprob: array
-        log-probability, one entry for each entry in X, of shape (N)
-    """
-    D = X.shape[1]
-    x_centered = X - mean
-    y = jnp.dot(x_centered, prec_chol.T)
-    log_det = -jnp.sum(jnp.log(jnp.diag(prec_chol)))
-    quad_form = jnp.sum(y**2, axis=1)
-    return log_det - 0.5 * (D * jnp.log(2 * jnp.pi) + quad_form)
-
-
-def log_prob_gmm_jax(X, centroids, precisions_cholesky, weights):
-    """Compute log-prob of GMM.
-
-    Parameters
-    ----------
-    X: array
-        data, of shape (N, D)
-    centroids: array
-        list of component centers, of shape (K, D)
-    precisions_cholesky: array
-        list of component precision matrices, of shape (K, D, D)
-    weights: array
-        list of component weights, of shape (K,)
-
-    Returns
-    -------
-    logprob: array
-        log-probabilities, one entry for each entry in X, of shape (N)
-    """
-    def log_prob_fn(mu, prec_chol, w):
-        return mvn_logpdf(X, mu, prec_chol) + jnp.log(w)
-
-    log_probs = jax.vmap(log_prob_fn)(centroids, precisions_cholesky, weights)  # shape (K, N)
-    return jax.scipy.special.logsumexp(log_probs, axis=0)  # shape (N,)
 
 
 def log_prob_gmm(X, centroids, covariances, weights):
@@ -195,6 +122,34 @@ def refine_weights_jax(X, means, precisions_cholesky, sample_weight=None):
     return weights / weights.sum()
 
 
+@jax.jit
+def assign_nearest_centroid_jax(X, centroid_indices):
+    """Assign points to centroids (Single K-means step).
+
+    Parameters
+    ----------
+    X: array
+        data, of shape (N, D)
+    centroid_indices: array
+        integers (0..N) indicating the data samples that are centroids.
+
+    Returns
+    -------
+    labels: array
+        index of closest centroid
+    centroids: array
+        location of centroids, X[centroid_indices]
+    """
+    centroids = X[centroid_indices]
+
+    # Compute squared distances from each point to each centroid
+    distances = jnp.sum((X[:, None, :] - centroids[None, :, :]) ** 2, axis=-1)
+
+    # Assign each point to the closest centroid
+    labels = jnp.argmin(distances, axis=1)
+    return labels, centroids
+
+
 class LightGMM:
     """Wrapper which transforms KMeans results into a GMM."""
 
@@ -227,21 +182,26 @@ class LightGMM:
         self.n_components = n_components
         self.initialised = False
 
-    def _cluster(self, X, sample_weight=None):
-        self.kmeans_ = KMeans(**self.init_kwargs).fit(X, sample_weight=sample_weight)
+    def _cluster(self, X, sample_weight=None, rng=np.random):
+        if self.init_kwargs.get('n_init', 0) == 1 and self.init_kwargs.get('max_iter', 0) == 1 and self.init_kwargs.get('init', 'random') == 'random':
+            indices_centroids = rng.choice(X.shape[0], size=self.n_components, replace=False)
+            self.labels_, self.means_ = assign_nearest_centroid_jax(X, indices_centroids)
+        else:
+            self.kmeans_ = KMeans(**self.init_kwargs).fit(X, sample_weight=sample_weight)
+            self.means_ = np.array(self.kmeans_.cluster_centers_)
+            self.labels_ = self.kmeans_.labels_
+        self.indices_ = self.labels_[None,:] == jnp.arange(self.n_components)[:,None]
         self.initialised = True
-        self.means_ = np.array(self.kmeans_.cluster_centers_)
-        self.labels_ = self.kmeans_.labels_
-        self.indices_ = self.kmeans_.labels_[None,:] == jnp.arange(self.n_components)[:,None]
 
     def _characterize_clusters(self, X, sample_weight=None):
-        self.covariances_, well_defined = local_covariances(X, self.indices_, self.means_, sample_weight=sample_weight)
+        self.covariances_, well_defined = local_covariances(
+            X, self.indices_, self.means_, sample_weight=sample_weight)
 
         for i in np.where(~well_defined)[0]:
             js = np.where(well_defined)[0]
             j = js[np.argmin(np.abs(js - i))]
             self.covariances_[i] = self.covariances_[j]
-            print(f"setting covariance of component {i} with {j} to numerical issues")
+            # print(f"setting covariance of component {i} with {j} to numerical issues")
 
         self.precisions_cholesky_ = _compute_precision_cholesky(self.covariances_, 'full')
         if self.refine_weights:
@@ -251,7 +211,7 @@ class LightGMM:
             weights = weights_int / float(weights_int.sum())
             self.weights_ = weights
 
-    def fit(self, X, sample_weight=None):
+    def fit(self, X, sample_weight=None, rng=np.random):
         """Fit.
 
         Parameters
@@ -260,8 +220,10 @@ class LightGMM:
             data, of shape (N, D)
         sample_weight: array
             weights of observations. shape (N,)
+        rng: object
+            Random number generator
         """
-        self._cluster(X, sample_weight=sample_weight)
+        self._cluster(X, sample_weight=sample_weight, rng=rng)
         self._characterize_clusters(X, sample_weight=sample_weight)
         self.converged_ = True
         self.n_iter_ = 0

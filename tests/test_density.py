@@ -9,8 +9,12 @@ from hypothesis.extra.numpy import arrays
 import pypmc.density.mixture
 import pytest
 import sklearn.mixture
+from scipy.linalg import cholesky
 
 import askcarl
+
+import jax
+jax.config.update("jax_enable_x64", True)
 
 
 def test_stackoverflow_example():
@@ -242,6 +246,11 @@ def test_stackoverflow_like_examples(mu, x, eigval, vectors):
     assert_allclose(dist.cdf(x1) * pdf_part, c1, atol=atol)
 
     g = askcarl.Gaussian(mean=mu, cov=A)
+    c2 = g.conditional_pdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]))
+    assert_allclose(dist.cdf(x1) * pdf_part, c2, atol=atol)
+
+    prec = cholesky(A, lower=True)
+    g = askcarl.Gaussian(mean=mu, cov=A, prec=prec)
     c2 = g.conditional_pdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]))
     assert_allclose(dist.cdf(x1) * pdf_part, c2, atol=atol)
 
