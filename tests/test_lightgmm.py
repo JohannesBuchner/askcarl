@@ -29,7 +29,22 @@ def test_weights():
     np.testing.assert_allclose(gmm3.means_, gmm4.means_)
     np.testing.assert_allclose(gmm3.precisions_cholesky_, gmm4.precisions_cholesky_)
     np.testing.assert_allclose(gmm3.covariances_, gmm4.covariances_)
-    
+
+    gmm5 = LightGMM(1, init_kwargs=dict(n_init=1, max_iter=1000, init='random', random_state=42), refine_weights=True)
+    gmm5.fit(X, (np.arange(X.shape[0]) < 500)*1.0)
+    np.testing.assert_allclose(gmm5.means_, gmm4.means_)
+    np.testing.assert_allclose(gmm5.precisions_cholesky_, gmm4.precisions_cholesky_)
+    np.testing.assert_allclose(gmm5.covariances_, gmm4.covariances_)
+
+
+def test_nokmeans():
+    np.random.seed(234)
+    N = 100
+    D = 2
+    X = np.random.normal(size=(N, D))
+    gmm = LightGMM(1, init_kwargs=dict(n_init=1, max_iter=1, init='random'))
+    gmm.fit(X)
+    assert np.all(gmm.labels_ == 0)
 
 def test_single_gauss():
     np.random.seed(234)

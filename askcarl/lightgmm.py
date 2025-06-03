@@ -118,7 +118,7 @@ def refine_weights_jax(X, means, precisions_cholesky, sample_weight=None):
     resp = jnp.exp(log_resp)
 
     # Compute new weights
-    weights = resp.average(axis=0, weights=sample_weight)
+    weights = jnp.average(resp, axis=0, weights=sample_weight)
     return weights / weights.sum()
 
 

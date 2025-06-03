@@ -16,6 +16,11 @@ Pure python.
         :target: https://johannesbuchner.github.io/askcarl/
         :alt: Documentation Status
 
+.. image:: https://coveralls.io/repos/github/JohannesBuchner/askcarl/badge.svg?branch=main
+        :target: https://coveralls.io/github/JohannesBuchner/askcarl?branch=main
+        :alt: Coverage
+
+
 About
 -----
 
