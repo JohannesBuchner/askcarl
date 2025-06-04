@@ -39,17 +39,10 @@ def local_covariances(X, indices, centroids, sample_weight=None):
         if not idx.sum() > 2 * D + 1:
             continue
         neighbors = X[idx]
-        if not np.linalg.matrix_rank(neighbors) == D:
-            if sample_weight is None:
-                cov_diag = np.diag(np.var(neighbors, axis=0))
-            else:
-                average = np.average(neighbors, weights=sample_weight, axis=0)
-                cov_diag = np.average((neighbors - average)**2, weights=sample_weight, axis=0)
-            if np.all(cov_diag > 0):
-                continue
-            cov = np.diag(cov_diag)
-        else:
-            cov = np.cov(neighbors, rowvar=False, aweights=sample_weight)
+        cov_diag = np.var(neighbors, axis=0)
+        if not np.all(cov_diag > 0):
+            continue
+        cov = np.cov(neighbors, rowvar=False, aweights=sample_weight)
 
         # assert is_positive_definite(cov)
         well_defined[i] = True

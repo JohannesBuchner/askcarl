@@ -40,3 +40,7 @@ def test_data():
                 assert_allclose(pdf, refrv.pdf(x), atol=1e-6)
                 logpdf = g.logpdf(x, mask)
                 assert_allclose(logpdf, refrv.logpdf(x), atol=1e-6)
+
+                g2 = Gaussian(mean, cov)
+                assert_allclose(g.pdf(x, mask), g2.pdf(x, mask), atol=1e-6)
+                assert_allclose(g.logpdf(x, mask), g2.logpdf(x, mask), atol=1e-6)

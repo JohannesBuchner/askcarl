@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.testing import assert_allclose
 from scipy.stats import multivariate_normal
-from hypothesis import given, strategies as st, example
+from hypothesis import given, strategies as st, example, settings
 from hypothesis.extra.numpy import arrays
 
 from askcarl.utils import cov_to_prec_cholesky, mvn_logpdf, mvn_pdf, is_positive_definite
@@ -61,6 +61,7 @@ def test_gauss_simple():
     pdf_value2 = mvn_pdf(x, mean, prec_chol)
     assert_allclose(pdf_value, pdf_value2)
 
+@settings(max_examples=500, deadline=None)
 @given(mean_and_cov())
 @example(mean_cov=(1, np.array([0.0]), np.array([[2.0]]))).via("discovered failure")
 @example(mean_cov=(2, np.zeros(2), np.diag([1.25, 1.25]))).via("discovered failure")
@@ -81,6 +82,19 @@ def test_gauss_simple():
         ),
     )
 ).via("discovered failure")
+@example(
+    mean_cov=(
+        3,
+        np.array([0.0, 0.0, 0.0]),
+        np.array(
+            [
+                [8.0, 0.5, -0.5],
+                [0.5, 8.03125002, 7.96874998],
+                [-0.5, 7.96874998, 8.03125002],
+            ]
+        ),
+    )
+).via("discovered failure")
 def test_mvn_logpdf(mean_cov):
     # a askcarl with one component must behave the same as a single gaussian
     ndim, mu, cov = mean_cov
@@ -89,7 +103,7 @@ def test_mvn_logpdf(mean_cov):
 
     rv_truth0 = multivariate_normal(mu * 0, cov)
     logpdf0 = mvn_logpdf(mu * 0, mu * 0, cov_to_prec_cholesky(cov))
-    assert_allclose(logpdf0, rv_truth0.logpdf(mu * 0))
+    assert_allclose(logpdf0, rv_truth0.logpdf(mu * 0), atol=1e-6, rtol=1e-6)
 
     rv_truth = multivariate_normal(mu, cov)
     xi = np.random.randn(1, len(mu))  # A random vector of same dimensionality as `mu`

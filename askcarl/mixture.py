@@ -33,7 +33,7 @@ class GaussianMixture:
         if precisions_cholesky is None:
             precisions_cholesky_maybe = [None] * len(covs)
         else:
-            precisions_cholesky_maybe = precisions_cholesky
+            precisions_cholesky_maybe = (precision_cholesky.T for precision_cholesky in precisions_cholesky)
         self.components = [
             Gaussian(mean, cov, precision_cholesky)
             for mean, cov, w, precision_cholesky in zip(means, covs, weights, precisions_cholesky_maybe) if w > 0]
