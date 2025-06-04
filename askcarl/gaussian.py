@@ -204,7 +204,11 @@ class Gaussian:
         cov_cross, cov_exact, cov_exact_sol, prec_chol_exact, dist_conditional, \
             exact_idx, upper_idx, n_exact, n_upper, mu_exact, mu_upper = \
             self.get_conditional_rv(mask)
-        x_exact = x[:,exact_idx]  # Known values for the PDF
+        if mask is Ellipsis:
+            x_exact = x
+            assert n_upper == 0
+        else:
+            x_exact = x[:,exact_idx]  # Known values for the PDF
 
         # Compute quantities for upper bound dimensions
         if n_upper > 0:
@@ -355,5 +359,9 @@ class Gaussian:
         unique_powers, unique_indices = np.unique(powers, return_index=True)
         for power, index in zip(unique_powers, unique_indices):
             members = powers == power
-            logpdf_values[members] = self.conditional_logpdf(x[members,:], mask[index, :])
+            if power == self.allpowers:
+                mask_here = Ellipsis
+            else:
+                mask_here = mask[index, :]
+            logpdf_values[members] = self.conditional_logpdf(x[members,:], mask_here)
         return logpdf_values

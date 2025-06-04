@@ -122,34 +122,6 @@ def refine_weights_jax(X, means, precisions_cholesky, sample_weight=None):
     return weights / weights.sum()
 
 
-@jax.jit
-def assign_nearest_centroid_jax(X, centroid_indices):
-    """Assign points to centroids (Single K-means step).
-
-    Parameters
-    ----------
-    X: array
-        data, of shape (N, D)
-    centroid_indices: array
-        integers (0..N) indicating the data samples that are centroids.
-
-    Returns
-    -------
-    labels: array
-        index of closest centroid
-    centroids: array
-        location of centroids, X[centroid_indices]
-    """
-    centroids = X[centroid_indices]
-
-    # Compute squared distances from each point to each centroid
-    distances = jnp.sum((X[:, None, :] - centroids[None, :, :]) ** 2, axis=-1)
-
-    # Assign each point to the closest centroid
-    labels = jnp.argmin(distances, axis=1)
-    return labels, centroids
-
-
 class LightGMM:
     """Wrapper which transforms KMeans results into a GMM."""
 
@@ -183,13 +155,9 @@ class LightGMM:
         self.initialised = False
 
     def _cluster(self, X, sample_weight=None, rng=np.random):
-        if self.init_kwargs.get('n_init', 0) == 1 and self.init_kwargs.get('max_iter', 0) == 1 and self.init_kwargs.get('init', 'random') == 'random':
-            indices_centroids = rng.choice(X.shape[0], size=self.n_components, replace=False)
-            self.labels_, self.means_ = assign_nearest_centroid_jax(X, indices_centroids)
-        else:
-            self.kmeans_ = KMeans(**self.init_kwargs).fit(X, sample_weight=sample_weight)
-            self.means_ = np.array(self.kmeans_.cluster_centers_)
-            self.labels_ = self.kmeans_.labels_
+        self.kmeans_ = KMeans(**self.init_kwargs).fit(X, sample_weight=sample_weight)
+        self.means_ = np.array(self.kmeans_.cluster_centers_)
+        self.labels_ = self.kmeans_.labels_
         self.indices_ = self.labels_[None,:] == jnp.arange(self.n_components)[:,None]
         self.initialised = True
 
