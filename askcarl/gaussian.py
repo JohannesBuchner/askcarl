@@ -246,10 +246,10 @@ class Gaussian:
         # Compute the CDF for the upper bounds
         if n_upper == 0:
             # trivial case: PDF only
-            if self.prec is not None:
-                cdf_value = mvn_logpdf(x, self.mean, self.prec)
-            else:
+            if self.prec is None:
                 cdf_value = multivariate_normal(np.zeros(self.ndim), self.cov).pdf(x - self.mean.reshape((1, -1)))
+            else:
+                cdf_value = mvn_logpdf(x, self.mean, self.prec)
         else:
             if n_exact == 0:
                 # trivial case: CDF only
@@ -295,7 +295,10 @@ class Gaussian:
                 # trivial case: CDF only
                 logpdf_value = 0
             else:
-                logpdf_value = multivariate_normal(mu_exact, cov_exact).logpdf(x_exact)
+                if prec_chol_exact is None:
+                    logpdf_value = multivariate_normal(mu_exact, cov_exact).logpdf(x_exact)
+                else:
+                    logpdf_value = mvn_logpdf(x_exact, mu_exact, prec_chol_exact)
             logcdf_value = logpdf_value + dist_conditional.logcdf(x_upper - conditional_mean)
 
         return logcdf_value

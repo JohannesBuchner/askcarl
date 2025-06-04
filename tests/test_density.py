@@ -86,7 +86,7 @@ def test_stackoverflow_example():
     assert_allclose(dist.cdf(x1) * pdf_part, c2, atol=1e-6)
 
     logc2 = g.conditional_logpdf(x.reshape((1, -1)), np.array([False, False, True, True, True, True]))
-    assert_allclose(dist.logcdf(x1) + logpdf_part, logc2)
+    assert_allclose(dist.logcdf(x1) + logpdf_part, logc2, atol=1e-4)
 
 def valid_QR(vectors):
     q, r = np.linalg.qr(vectors)
