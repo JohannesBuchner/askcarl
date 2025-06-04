@@ -36,7 +36,7 @@ def local_covariances(X, indices, centroids, sample_weight=None):
     well_defined = np.zeros(N, dtype=bool)
     covariances = np.empty((N, D, D))
     for i, idx in enumerate(indices):
-        if not idx.sum() > D + 1:
+        if not idx.sum() > 2 * D + 1:
             continue
         neighbors = X[idx]
         if not np.linalg.matrix_rank(neighbors) == D:
