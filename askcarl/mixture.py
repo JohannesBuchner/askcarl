@@ -25,12 +25,18 @@ class GaussianMixture:
         list of Gaussian components.
     """
 
-    def __init__(self, weights, means, covs):
+    def __init__(self, weights, means, covs, precisions_cholesky=None):
         assert np.isfinite(weights).all()
         assert len(weights) == len(covs)
         weights = np.asarray(weights)
-        assert weights.shape == (len(means),)
-        self.components = [Gaussian(mean, cov) for mean, cov, w in zip(means, covs, weights) if w > 0]
+        assert np.shape(weights) == (len(means),)
+        if precisions_cholesky is None:
+            precisions_cholesky_maybe = [None] * len(covs)
+        else:
+            precisions_cholesky_maybe = precisions_cholesky
+        self.components = [
+            Gaussian(mean, cov, precision_cholesky)
+            for mean, cov, w, precision_cholesky in zip(means, covs, weights, precisions_cholesky_maybe) if w > 0]
         self.weights = weights[weights > 0]
         assert len(self.weights) == len(self.components)
         self.log_weights = np.log(self.weights)
@@ -60,7 +66,7 @@ class GaussianMixture:
 
         Parameters
         -----------
-        mix: `sklearn.mixture.GaussianMixture`
+        skgmm: `sklearn.mixture.GaussianMixture`
             Gaussian mixture.
 
         Returns
@@ -70,12 +76,15 @@ class GaussianMixture:
         """
         covariance_type = skgmm.covariance_type
         if hasattr(skgmm, '_gmm') and covariance_type == 'full':
+            # handle pypmc
             return GaussianMixture(
                 weights=skgmm._gmm.weights[0,:,0,0],
                 means=skgmm._gmm.means[0,:,:,0],
                 covs=skgmm._gmm.covariances.precisions_cholesky_numpy)
+        precisions_cholesky = None
         if covariance_type == 'full':
             covs = skgmm.covariances_
+            precisions_cholesky = getattr(skgmm, 'precisions_cholesky_', None)
         elif covariance_type == 'tied':
             covs = [skgmm.covariances_] * len(skgmm.weights_)
         elif covariance_type == 'diag':
@@ -87,7 +96,8 @@ class GaussianMixture:
         return GaussianMixture(
             weights=skgmm.weights_,
             means=skgmm.means_,
-            covs=covs)
+            covs=covs,
+            precisions_cholesky=precisions_cholesky)
 
     def pdf(self, x, mask):
         """Compute probability density at x.

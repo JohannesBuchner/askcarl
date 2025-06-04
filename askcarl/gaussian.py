@@ -89,21 +89,23 @@ class Gaussian:
         mean vector of the multivariate normal distribution.
     cov: array
         covariance matrix of the multivariate normal distribution.
+    precision_cholesky: array
+        Cholesky factors of the precision matrix.
     """
 
-    def __init__(self, mean, cov, prec=None):
+    def __init__(self, mean, cov, precision_cholesky=None):
         self.ndim = len(mean)
         self.powers = 2**np.arange(self.ndim)
         self.allpowers = 2**self.ndim - 1
         assert self.allpowers == self.powers.sum()
         self.mean = mean
         self.cov = cov
-        self.prec = prec
+        self.precision_cholesky = precision_cholesky
         assert mean.shape == (self.ndim,), (mean.shape,)
         assert cov.shape == (self.ndim, self.ndim), (cov.shape, self.ndim)
-        if prec is not None:
-            assert prec.shape == (self.ndim, self.ndim), (prec.shape, self.ndim)
-            assert np.isfinite(prec).all(), cov
+        if precision_cholesky is not None:
+            assert precision_cholesky.shape == (self.ndim, self.ndim), (precision_cholesky.shape, self.ndim)
+            assert np.isfinite(precision_cholesky).all(), cov
         assert np.isfinite(mean).all(), mean
         assert np.isfinite(cov).all(), cov
         self.rvs = {}
@@ -145,7 +147,7 @@ class Gaussian:
                 mu_upper = np.empty(0)
 
                 cov_exact = cov
-                prec_chol_exact = self.prec
+                prec_chol_exact = self.precision_cholesky
                 cov_exact_sol = None
 
                 # If there are no upper bounds, the conditional covariance is the original one
@@ -204,24 +206,20 @@ class Gaussian:
         cov_cross, cov_exact, cov_exact_sol, prec_chol_exact, dist_conditional, \
             exact_idx, upper_idx, n_exact, n_upper, mu_exact, mu_upper = \
             self.get_conditional_rv(mask)
-        if mask is Ellipsis:
+        if n_upper == 0:
             x_exact = x
-            assert n_upper == 0
+            # If there are no upper bounds, the conditional mean and cov are just the original ones
+            conditional_mean = mu_exact.reshape((1, -1))
+            x_upper = None
         else:
+            # Compute quantities for upper bound dimensions
             x_exact = x[:,exact_idx]  # Known values for the PDF
-
-        # Compute quantities for upper bound dimensions
-        if n_upper > 0:
             x_upper = x[:,upper_idx]  # Upper bounds for the CDF
             newcov = (x_exact - mu_exact[None, :]) @ cov_exact_sol
             conditional_mean = mu_upper[None, :] + newcov
             assert newcov.shape == (len(x), n_upper), (newcov.shape, (len(x), n_upper))
             assert conditional_mean.shape == ((len(x), n_upper)), (conditional_mean.shape, ((len(x), n_upper)))
             assert x_upper.shape == ((len(x), n_upper)), (x_upper.shape, ((len(x), n_upper)))
-        else:
-            # If there are no upper bounds, the conditional mean and cov are just the original ones
-            conditional_mean = mu_exact.reshape((1, -1))
-            x_upper = None
 
         return n_upper, n_exact, cov_cross, cov_exact, cov_exact_sol, prec_chol_exact, \
             x_exact, x_upper, mu_exact, mu_upper, conditional_mean, dist_conditional
@@ -250,10 +248,10 @@ class Gaussian:
         # Compute the CDF for the upper bounds
         if n_upper == 0:
             # trivial case: PDF only
-            if self.prec is None:
+            if self.precision_cholesky is None:
                 cdf_value = multivariate_normal(np.zeros(self.ndim), self.cov).pdf(x - self.mean.reshape((1, -1)))
             else:
-                cdf_value = mvn_logpdf(x, self.mean, self.prec)
+                cdf_value = mvn_logpdf(x, self.mean, self.precision_cholesky)
         else:
             if n_exact == 0:
                 # trivial case: CDF only
@@ -290,8 +288,8 @@ class Gaussian:
         # Compute the CDF for the upper bounds
         if n_upper == 0:
             # trivial case: PDF only
-            if self.prec is not None:
-                logcdf_value = mvn_logpdf(x, self.mean, self.prec)
+            if self.precision_cholesky is not None:
+                logcdf_value = mvn_logpdf(x, self.mean, self.precision_cholesky)
             else:
                 logcdf_value = multivariate_normal(np.zeros(self.ndim), self.cov).logpdf(x - self.mean.reshape((1, -1)))
         else:
