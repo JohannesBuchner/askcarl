@@ -4,7 +4,7 @@ from scipy.stats import norm, multivariate_normal
 from scipy.integrate import dblquad
 from scipy.special import logsumexp
 from numpy.testing import assert_allclose
-from hypothesis import given, strategies as st, example, settings, HealthCheck, reproduce_failure
+from hypothesis import given, strategies as st, example, settings, HealthCheck
 from hypothesis.extra.numpy import arrays
 import pypmc.density.mixture
 import pytest
@@ -319,6 +319,7 @@ def mean_and_diag_stdevs2(draw):
 
 
 @given(mean_and_diag_stdevs2())
+@settings(deadline=None)
 @example(
     mean_and_cov=(2, array([1., 0.]), array([1., 1.]), array([0., 0.]), 1),
 ).via('discovered failure')

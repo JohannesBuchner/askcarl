@@ -52,32 +52,6 @@ def mvn_pdf(X, mean, prec_chol):
     return jnp.exp(mvn_logpdf(X, mean, prec_chol))
 
 
-def log_prob_gmm_jax(X, centroids, precisions_cholesky, weights):
-    """Compute log-prob of GMM.
-
-    Parameters
-    ----------
-    X: array
-        data, of shape (N, D)
-    centroids: array
-        list of component centers, of shape (K, D)
-    precisions_cholesky: array
-        list of component precision matrices, of shape (K, D, D)
-    weights: array
-        list of component weights, of shape (K,)
-
-    Returns
-    -------
-    logprob: array
-        log-probabilities, one entry for each entry in X, of shape (N)
-    """
-    def log_prob_fn(mu, prec_chol, w):
-        return mvn_logpdf(X, mu, prec_chol) + jnp.log(w)
-
-    log_probs = jax.vmap(log_prob_fn)(centroids, precisions_cholesky, weights)  # shape (K, N)
-    return jax.scipy.special.logsumexp(log_probs, axis=0)  # shape (N,)
-
-
 def is_positive_definite(cov, tol=1e-10, condthresh=1e6):
     """Check that the covariance matrix is well behaved.
 
