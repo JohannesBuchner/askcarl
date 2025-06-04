@@ -27,9 +27,9 @@ def mvn_logpdf(X, mean, prec_chol):
     D = X.shape[1]
     x_centered = X - mean
     y = jnp.dot(x_centered, prec_chol.T)
-    log_det = -2 * jnp.sum(jnp.log(jnp.diag(prec_chol)))
+    log_det = jnp.sum(jnp.log(jnp.diag(prec_chol)))
     quad_form = jnp.sum(y**2, axis=1)
-    return -0.5 * log_det - 0.5 * (D * jnp.log(2 * jnp.pi) + quad_form)
+    return log_det - 0.5 * (D * jnp.log(2 * jnp.pi) + quad_form)
 
 
 def mvn_pdf(X, mean, prec_chol):

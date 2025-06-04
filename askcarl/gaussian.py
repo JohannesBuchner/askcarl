@@ -251,7 +251,7 @@ class Gaussian:
             if self.precision_cholesky is None:
                 cdf_value = multivariate_normal(np.zeros(self.ndim), self.cov).pdf(x - self.mean.reshape((1, -1)))
             else:
-                cdf_value = mvn_logpdf(x, self.mean, self.precision_cholesky)
+                cdf_value = mvn_pdf(x, self.mean, self.precision_cholesky)
         else:
             if n_exact == 0:
                 # trivial case: CDF only
@@ -325,11 +325,15 @@ class Gaussian:
         assert mask.shape == (len(x), self.ndim), (mask.shape, (len(x), self.ndim))
         assert x.shape == (len(mask), self.ndim), (x.shape, (len(x), self.ndim))
         pdf_values = np.zeros(len(x)) * np.nan
-        powers = np.einsum('ij,j->i', mask * 1, self.powers)
+        powers = np.dot(mask, self.powers)
         unique_powers, unique_indices = np.unique(powers, return_index=True)
         for power, index in zip(unique_powers, unique_indices):
             members = powers == power
-            pdf_values[members] = self.conditional_pdf(x[members,:], mask[index, :])
+            if power == self.allpowers:
+                mask_here = Ellipsis
+            else:
+                mask_here = mask[index, :]
+            pdf_values[members] = self.conditional_pdf(x[members,:], mask_here)
         assert np.isfinite(pdf_values).all(), pdf_values
         return pdf_values
 
