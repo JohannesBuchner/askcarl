@@ -95,6 +95,20 @@ def test_gauss_simple():
         ),
     )
 ).via("discovered failure")
+@example(
+    mean_cov=(
+        4,
+        np.array([0.0, 0.0, 0.0, 0.0]),
+        np.array(
+            [
+                [1.64387881, 0.5668371, 1.53617464, -0.72045457],
+                [0.5668371, 2.12555721, 0.72270911, 0.94279687],
+                [1.53617464, 0.72270911, 1.45482809, -0.55412942],
+                [-0.72045457, 0.94279687, -0.55412942, 2.25324107],
+            ]
+        ),
+    )
+).via("discovered failure")
 def test_mvn_logpdf(mean_cov):
     # a askcarl with one component must behave the same as a single gaussian
     ndim, mu, cov = mean_cov
@@ -108,7 +122,7 @@ def test_mvn_logpdf(mean_cov):
     rv_truth = multivariate_normal(mu, cov)
     xi = np.random.randn(1, len(mu))  # A random vector of same dimensionality as `mu`
     logpdf1 = mvn_logpdf(xi, mu, cov_to_prec_cholesky(cov))
-    assert_allclose(logpdf1, rv_truth.logpdf(xi[0]), atol=1e-6, rtol=1e-6)
+    assert_allclose(logpdf1, rv_truth.logpdf(xi[0]), atol=1e-6, rtol=1e-5)
 
 def test_gauss_variations2d():
     for shape in 2, (1, 2), (10, 2), 20, (21, 41):

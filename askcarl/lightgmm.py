@@ -1,12 +1,17 @@
 """A extremely fast-to-train GMM."""
+from functools import partial
+
 import jax
 import jax.numpy as jnp
 import numpy as np
+from jax.ops import segment_sum
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
 from sklearn.mixture._gaussian_mixture import _compute_precision_cholesky
+
+from .utils import cov_to_prec_cholesky
 
 __all__ = ["LightGMM"]
 
@@ -115,6 +120,141 @@ def refine_weights_jax(X, means, precisions_cholesky, sample_weight=None):
     return weights / weights.sum()
 
 
+def kmeans_assign_underpopulated_labels(distances, labels, cardinality, min_cluster_size):
+    underpopulated = cardinality < min_cluster_size
+    for label_to_replace in np.where(underpopulated)[0]:
+        # find nearest and assign them to the cluster
+        nearest = jnp.argsort(distances[:, label_to_replace])[:min_cluster_size]
+        labels[nearest] = label_to_replace
+        # print(f"boosting underpopulated cluster: {nearest} <- {label_to_replace}")
+    return labels
+
+
+@partial(jax.jit, static_argnames=['K'])
+def kmeans_assign_labels(X, centroids, K, sample_weight):
+    # compute distances, update labels, update centers, update labels.
+    N, D = X.shape
+
+    # First: compute squared distances efficiently
+    X_norm = jnp.sum(X ** 2, axis=1, keepdims=True)       # (N, 1)
+    C_norm = jnp.sum(centroids ** 2, axis=1, keepdims=True).T  # (1, K)
+    distances = X_norm + C_norm - 2 * X @ centroids.T      # (N, K)
+
+    # Assign initial labels
+    labels = jnp.argmin(distances, axis=1)
+
+    # Count members per cluster
+    # counts = segment_sum(jnp.ones(N, dtype=jnp.int32), labels, K)
+    counts = segment_sum(sample_weight, labels, K)
+    cardinality = jnp.bincount(labels, minlength=K, length=K)
+
+    return distances, labels, cardinality, counts
+
+
+@partial(jax.jit, static_argnames=['K'])
+def kmeans_assign_centroids_from_labels_weighted(X, labels, K, sample_weight):
+    N, D = X.shape
+    weights = sample_weight[:, None]
+    weighted_X = X * weights
+    counts = segment_sum(sample_weight, labels, K)
+    summed = segment_sum(weighted_X, labels, K)
+    return summed, counts
+
+
+def relocate_empty_clusters_dense(X, distances, sample_weight, centers_sum, weight_in_clusters, labels):
+    N, D = X.shape
+    K, = weight_in_clusters.shape
+    assert distances.shape == (N, K)
+    assert weight_in_clusters.shape == (K,)
+    assert labels.shape == (N,)
+    assert sample_weight.shape == (N,)
+    empty_clusters = np.where(weight_in_clusters == 0)[0]
+    n_empty = empty_clusters.shape[0]
+    if n_empty == 0 or np.max(distances) == 0:
+        return centers_sum / weight_in_clusters[:, None]
+
+    weight_in_clusters = np.array(weight_in_clusters)
+
+    assigned_distances = distances[np.arange(N), labels]
+    far_from_centers = np.argpartition(assigned_distances, -n_empty)[-n_empty:]
+
+    for idx in range(n_empty):
+        new_cluster_id = empty_clusters[idx]
+        far_idx = far_from_centers[idx]
+        weight = sample_weight[far_idx]
+        old_cluster_id = labels[far_idx]
+
+        centers_sum[old_cluster_id] -= X[far_idx] * weight
+        centers_sum[new_cluster_id] = X[far_idx] * weight
+
+        weight_in_clusters[new_cluster_id] = weight
+        weight_in_clusters[old_cluster_id] -= weight
+
+    # to centroid space
+    return centers_sum / weight_in_clusters[:, None]
+
+
+def kmeans_single_iteration(X, centroid_indices, sample_weight=None, min_cluster_size=1):
+    # compute distances, update labels, update centers, update labels.
+    N, D = X.shape
+    K, = centroid_indices.shape
+    centers = X[centroid_indices].copy()
+
+    # === E-step: assign labels to initial centers ===
+    distances, labels, _, weight_in_clusters = kmeans_assign_labels(
+        X, centers, K=K, sample_weight=sample_weight)
+
+    # === M-step: compute cluster sums and counts ===
+    summed, counts = kmeans_assign_centroids_from_labels_weighted(
+        X, labels, K, sample_weight=sample_weight)
+
+    # === Handle empty clusters ===
+    centers_relocated = relocate_empty_clusters_dense(
+        X, distances, sample_weight, summed, counts, labels)
+
+    distances_final, labels_final, cardinality, _ = kmeans_assign_labels(
+        X, centers_relocated, K=K, sample_weight=sample_weight)
+    return labels_final, centers_relocated, cardinality
+
+
+def kmeans_iterate(X, K, sample_weight=None, min_cluster_size=1, rng=np.random, verbose=False):
+    N, D = X.shape
+    covariances = np.empty((K, D, D))
+    precisions_chol = np.empty((K, D, D))
+    if sample_weight is None:
+        sample_weight_actual = np.ones(N)
+    else:
+        sample_weight_actual = sample_weight
+    while True:
+        centroid_indices = rng.choice(N, size=K, replace=False)
+        labels, centroids, cardinalities = kmeans_single_iteration(
+            X, centroid_indices, sample_weight=sample_weight_actual, min_cluster_size=min_cluster_size)
+        # to fail fast, start with the smallest cluster
+        order = np.argsort(cardinalities)
+        if cardinalities[order[0]] < min_cluster_size:
+            if verbose:
+                print('fail, some clusters are too small!', N, D, K, min_cluster_size, cardinalities[order[0]])
+            continue
+        try:
+            for k in order:
+                mask = labels == k
+                covariances[k] = np.cov(
+                    X[mask,:], rowvar=False,
+                    aweights=None if sample_weight is None else sample_weight[mask])
+                precisions_chol[k] = cov_to_prec_cholesky(covariances[k]).T
+            if verbose:
+                print('success!', cardinalities[order[0]])
+            return labels, centroids, covariances, precisions_chol, cardinalities / float(N)
+        except np.linalg.LinAlgError:
+            # not a successful construction, try again
+            continue
+        except FloatingPointError as e:
+            # not a successful construction, try again
+            if verbose:
+                print('fail!', e, cardinalities[k])
+            continue
+
+
 class LightGMM:
     """Wrapper which transforms KMeans results into a GMM."""
 
@@ -184,8 +324,14 @@ class LightGMM:
         rng: object
             Random number generator
         """
-        self._cluster(X, sample_weight=sample_weight, rng=rng)
-        self._characterize_clusters(X, sample_weight=sample_weight)
+        if self.init_kwargs.get('n_init', 0) == 1 and self.init_kwargs.get('max_iter', 0) == 1 and self.init_kwargs.get('init', 'random') == 'random':
+            self.labels_, self.means_, self.covariances_, self.precisions_cholesky_, self.weights_ = kmeans_iterate(
+                X, self.n_components,
+                sample_weight=sample_weight, rng=rng,
+                min_cluster_size=2)
+        else:
+            self._cluster(X, sample_weight=sample_weight, rng=rng)
+            self._characterize_clusters(X, sample_weight=sample_weight)
         self.converged_ = True
         self.n_iter_ = 0
 
