@@ -13,7 +13,7 @@ from sklearn.mixture._gaussian_mixture import _compute_precision_cholesky
 
 from .utils import cov_to_prec_cholesky
 
-__all__ = ["LightGMM"]
+__all__ = ["LightGMM", "LightGMM2"]
 
 from .utils import mvn_logpdf
 
@@ -281,10 +281,11 @@ class LightGMM:
         assert not warm_start
         assert covariance_type == 'full'
         self.covariance_type = covariance_type
-        init_kwargs['n_clusters'] = n_components
+        self.n_components = int(n_components)
+        init_kwargs['n_clusters'] = self.n_components
+        assert refine_weights in (True, False)
         self.refine_weights = refine_weights
         self.init_kwargs = init_kwargs
-        self.n_components = n_components
         self.initialised = False
 
     def _cluster(self, X, sample_weight=None, rng=np.random):
@@ -329,6 +330,8 @@ class LightGMM:
                 X, self.n_components,
                 sample_weight=sample_weight, rng=rng,
                 min_cluster_size=2)
+            if self.refine_weights:
+                self.weights_ = refine_weights_jax(X, self.means_, self.precisions_cholesky_, sample_weight=sample_weight)
         else:
             self._cluster(X, sample_weight=sample_weight, rng=rng)
             self._characterize_clusters(X, sample_weight=sample_weight)
@@ -409,7 +412,13 @@ class LightGMM:
 
 
 class LightGMM2:
-    """Wrapper which fits K-folds two LightGMMs results."""
+    """Wrapper which fits K-folds two LightGMMs results.
+
+    The training data is split into two halfs, and a mixture
+    is built from each half. Then, the weights of the mixture
+    are optimized with the other half. This should avoid overfitting
+    (compared to building a GMM and optimizing on the same data set).
+    """
 
     def __init__(
         self, n_components,
@@ -434,9 +443,9 @@ class LightGMM2:
         assert not warm_start
         assert covariance_type == 'full'
         self.covariance_type = covariance_type
-        init_kwargs['n_clusters'] = n_components
+        self.n_components = int(n_components)
+        init_kwargs['n_clusters'] = self.n_components
         self.init_kwargs = init_kwargs
-        self.n_components = n_components
         self.initialised = False
         self.gmm1 = LightGMM(n_components, init_kwargs=init_kwargs)
         self.gmm2 = LightGMM(n_components, init_kwargs=init_kwargs)

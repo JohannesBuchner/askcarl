@@ -141,10 +141,10 @@ class Gaussian:
             if mask is Ellipsis:
                 n_exact = self.ndim
                 n_upper = 0
-                exact_idx = np.arange(self.ndim)
-                upper_idx = np.empty(0)
-                mu_exact = self.mean[exact_idx]
-                mu_upper = np.empty(0)
+                exact_idx = None
+                upper_idx = []
+                mu_exact = self.mean
+                mu_upper = upper_idx
 
                 cov_exact = cov
                 prec_chol_exact = self.precision_cholesky
@@ -180,7 +180,7 @@ class Gaussian:
 
             # Create the conditional multivariate normal distributions
             if n_upper > 0:
-                rv = multivariate_normal(mean=np.zeros(len(conditional_cov)), cov=conditional_cov)
+                rv = multivariate_normal(mean=np.zeros(n_upper), cov=conditional_cov)
             else:
                 rv = None
             self.rvs[key] = cov_cross, cov_exact, cov_exact_sol, prec_chol_exact, \
@@ -241,27 +241,28 @@ class Gaussian:
         pdf: array
             Probability density. One value for each `x`.
         """
+        # Compute the CDF for the upper bounds
+        if mask is Ellipsis or mask.all():
+            # trivial case: PDF only
+            if self.precision_cholesky is None:
+                return multivariate_normal(np.zeros(self.ndim), self.cov).pdf(x - self.mean.reshape((1, -1)))
+            else:
+                return mvn_pdf(x, self.mean, self.precision_cholesky)
+
         n_upper, n_exact, cov_cross, cov_exact, cov_exact_sol, prec_chol_exact, \
             x_exact, x_upper, mu_exact, mu_upper, conditional_mean, dist_conditional = \
             self._prepare_conditional_pdf(x=x, mask=mask)
 
-        # Compute the CDF for the upper bounds
-        if n_upper == 0:
-            # trivial case: PDF only
-            if self.precision_cholesky is None:
-                cdf_value = multivariate_normal(np.zeros(self.ndim), self.cov).pdf(x - self.mean.reshape((1, -1)))
-            else:
-                cdf_value = mvn_pdf(x, self.mean, self.precision_cholesky)
+        if n_exact == 0:
+            # trivial case: CDF only
+            pdf_value = 1
         else:
-            if n_exact == 0:
-                # trivial case: CDF only
-                pdf_value = 1
+            if prec_chol_exact is None:
+                pdf_value = multivariate_normal(mu_exact, cov_exact).pdf(x_exact)
             else:
-                if prec_chol_exact is None:
-                    pdf_value = multivariate_normal(mu_exact, cov_exact).pdf(x_exact)
-                else:
-                    pdf_value = mvn_pdf(x_exact, mu_exact, prec_chol_exact)
-            cdf_value = pdf_value * dist_conditional.cdf(x_upper - conditional_mean)
+                pdf_value = mvn_pdf(x_exact, mu_exact, prec_chol_exact)
+        assert dist_conditional is not None, (mask, n_upper, n_exact)
+        cdf_value = pdf_value * dist_conditional.cdf(x_upper - conditional_mean)
 
         return cdf_value
 
@@ -282,26 +283,26 @@ class Gaussian:
         logpdf: array
             logarithm of the probability density. One value for each `x`.
         """
-        n_upper, n_exact, cov_cross, cov_exact, inv_cov_exact, prec_chol_exact, x_exact, x_upper, mu_exact, mu_upper, conditional_mean, dist_conditional = \
-            self._prepare_conditional_pdf(x=x, mask=mask)
-
         # Compute the CDF for the upper bounds
-        if n_upper == 0:
+        if mask is Ellipsis or mask.all():
             # trivial case: PDF only
             if self.precision_cholesky is not None:
-                logcdf_value = mvn_logpdf(x, self.mean, self.precision_cholesky)
+                return mvn_logpdf(x, self.mean, self.precision_cholesky)
             else:
-                logcdf_value = multivariate_normal(np.zeros(self.ndim), self.cov).logpdf(x - self.mean.reshape((1, -1)))
+                return multivariate_normal(np.zeros(self.ndim), self.cov).logpdf(x - self.mean.reshape((1, -1)))
+
+        n_upper, n_exact, cov_cross, cov_exact, inv_cov_exact, prec_chol_exact, x_exact, x_upper, mu_exact, mu_upper, conditional_mean, dist_conditional = \
+            self._prepare_conditional_pdf(x=x, mask=mask)
+        if n_exact == 0:
+            # trivial case: CDF only
+            logpdf_value = 0
         else:
-            if n_exact == 0:
-                # trivial case: CDF only
-                logpdf_value = 0
+            if prec_chol_exact is None:
+                logpdf_value = multivariate_normal(mu_exact, cov_exact).logpdf(x_exact)
             else:
-                if prec_chol_exact is None:
-                    logpdf_value = multivariate_normal(mu_exact, cov_exact).logpdf(x_exact)
-                else:
-                    logpdf_value = mvn_logpdf(x_exact, mu_exact, prec_chol_exact)
-            logcdf_value = logpdf_value + dist_conditional.logcdf(x_upper - conditional_mean)
+                logpdf_value = mvn_logpdf(x_exact, mu_exact, prec_chol_exact)
+        assert dist_conditional is not None, (mask, n_upper, n_exact)
+        logcdf_value = logpdf_value + dist_conditional.logcdf(x_upper - conditional_mean)
 
         return logcdf_value
 

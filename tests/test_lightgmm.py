@@ -77,7 +77,7 @@ def test_two_gauss():
         print(np.diag(gmm.covariances_[0])**0.5)
         print(gmm.means_[1])
         print(np.diag(gmm.covariances_[1])**0.5)
-        np.logical_or(
+        assert np.logical_or(
             np.logical_and((np.abs(gmm.means_[0] - 10) < 0.04).all(), (np.abs(gmm.means_[1]) < 0.04).all()),
             np.logical_and((np.abs(gmm.means_[1] - 10) < 0.04).all(), (np.abs(gmm.means_[0]) < 0.04).all()))
         score = gmm.score(X)
