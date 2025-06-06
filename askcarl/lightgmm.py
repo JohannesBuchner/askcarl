@@ -406,3 +406,143 @@ class LightGMM:
             data, of shape (N, D)
         """
         return self.to_sklearn().sample(N)
+
+
+class LightGMM2:
+    """Wrapper which fits K-folds two LightGMMs results."""
+
+    def __init__(
+        self, n_components,
+        init_kwargs=dict(n_init=1, max_iter=1, init='random'),
+        warm_start=False, covariance_type='full'
+    ):
+        """Initialise.
+
+        Parameters
+        ----------
+        n_components: int
+            number of Gaussian components.
+        refine_weights: bool
+            whether to include a E step at the end.
+        init_kwargs: dict
+            arguments passed to KMeans
+        warm_start: bool
+            not supported, has to be False
+        covariance_type: str
+            only "full" is supported
+        """
+        assert not warm_start
+        assert covariance_type == 'full'
+        self.covariance_type = covariance_type
+        init_kwargs['n_clusters'] = n_components
+        self.init_kwargs = init_kwargs
+        self.n_components = n_components
+        self.initialised = False
+        self.gmm1 = LightGMM(n_components, init_kwargs=init_kwargs)
+        self.gmm2 = LightGMM(n_components, init_kwargs=init_kwargs)
+
+    def fit(self, X, sample_weight=None, rng=np.random):
+        """Fit.
+
+        Parameters
+        ----------
+        X: array
+            data, of shape (N, D)
+        sample_weight: array
+            weights of observations. shape (N,)
+        rng: object
+            Random number generator
+        """
+        X1 = X[::2]
+        X2 = X[1::2]
+        W1 = None if sample_weight is None else sample_weight[::2]
+        W2 = None if sample_weight is None else sample_weight[1::2]
+        # optimize means and covariances to one half
+        self.gmm1.fit(X1, W1, rng=rng)
+        self.gmm2.fit(X2, W2, rng=rng)
+        # optimize weights onto the left-out sample
+        self.gmm1.weights_ = refine_weights_jax(X2, self.gmm1.means_, self.gmm1.precisions_cholesky_, sample_weight=W2)
+        self.gmm2.weights_ = refine_weights_jax(X1, self.gmm2.means_, self.gmm2.precisions_cholesky_, sample_weight=W1)
+        self.labels_ = self.gmm1.labels_
+        self.weights_ = np.concatenate((self.gmm1.weights_, self.gmm2.weights_)) / 2.0
+        assert self.weights_.shape == (self.n_components * 2,)
+        self.means_ = np.vstack((self.gmm1.means_, self.gmm2.means_))
+        assert self.means_.shape == (self.n_components * 2, X.shape[1])
+        self.precisions_cholesky_ = np.vstack((self.gmm1.precisions_cholesky_, self.gmm2.precisions_cholesky_))
+        assert self.precisions_cholesky_.shape == (self.n_components * 2, X.shape[1], X.shape[1])
+        self.covariances_ = np.vstack((self.gmm1.covariances_, self.gmm2.covariances_))
+        assert self.covariances_.shape == (self.n_components * 2, X.shape[1], X.shape[1])
+        self.converged_ = True
+        self.n_iter_ = 0
+
+    def to_sklearn(self):
+        """Convert to a scikit-learn GaussianMixture object.
+
+        Returns
+        -------
+        gmm: object
+            scikit-learn GaussianMixture
+        """
+        gmm = GaussianMixture(
+            n_components=self.n_components,
+            covariance_type='full',
+            warm_start=True,
+            weights_init=self.weights_,
+            means_init=self.means_,
+            precisions_init=self.precisions_cholesky_,
+        )
+        # This does a warm start at the given parameters
+        gmm.converged_ = True
+        gmm.lower_bound_ = -np.inf
+        gmm.weights_ = self.weights_
+        gmm.means_ = self.means_
+        gmm.precisions_cholesky_ = self.precisions_cholesky_
+        gmm.covariances_ = self.covariances_
+        return gmm
+
+    def score_samples(self, X):
+        """Compute score of samples.
+
+        Parameters
+        ----------
+        X: array
+            data, of shape (N, D)
+
+        Returns
+        -------
+        logprob: array
+            log-probabilities, one entry for each entry in X, of shape (N)
+        """
+        return log_prob_gmm(X, self.means_, self.covariances_, self.weights_)
+
+    def score(self, X, sample_weight=None):
+        """Compute score of samples.
+
+        Parameters
+        ----------
+        X: array
+            data, of shape (N, D)
+        sample_weight: array
+            weights of observations. shape (N,)
+
+        Returns
+        -------
+        logprob: float
+            average log-probabilities, one entry for each entry in X, of shape (N)
+        """
+        return np.average(self.score_samples(X), weights=sample_weight)
+
+    def sample(self, N):
+        """Generate samples from model.
+
+        Parameters
+        ----------
+        N: int
+            number of samples
+
+        Returns
+        -------
+        X: array
+            data, of shape (N, D)
+        """
+        return self.to_sklearn().sample(N)
