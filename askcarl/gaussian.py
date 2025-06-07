@@ -357,9 +357,11 @@ class Gaussian:
         """
         assert mask.shape == (len(x), self.ndim), (mask.shape, (len(x), self.ndim))
         assert x.shape == (len(mask), self.ndim), (x.shape, (len(x), self.ndim))
-        logpdf_values = np.zeros(len(x)) * np.nan
         powers = (mask * 1) @ self.powers
         unique_powers, unique_indices = np.unique(powers, return_index=True)
+        if len(unique_powers) == 1 and unique_powers[0] == self.allpowers:
+            return self.conditional_logpdf(x, Ellipsis).reshape((len(x),))
+        logpdf_values = np.zeros(len(x)) * np.nan
         for power, index in zip(unique_powers, unique_indices):
             members = powers == power
             if power == self.allpowers:
