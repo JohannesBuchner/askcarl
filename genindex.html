@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Index &mdash; askcarl 1.2.1 documentation</title>
+  <title>Index &mdash; askcarl 2.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
 
@@ -15,7 +15,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=ca842793"></script>
+        <script src="_static/documentation_options.js?v=20623aea"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
@@ -36,7 +36,7 @@
             askcarl
           </a>
               <div class="version">
-                1.2.1
+                2.1.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -87,6 +87,7 @@
  | <a href="#C"><strong>C</strong></a>
  | <a href="#F"><strong>F</strong></a>
  | <a href="#G"><strong>G</strong></a>
+ | <a href="#I"><strong>I</strong></a>
  | <a href="#L"><strong>L</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#P"><strong>P</strong></a>
@@ -112,8 +113,6 @@
         <li><a href="askcarl.html#module-askcarl.gaussian">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     askcarl.lightgmm
 
@@ -121,11 +120,20 @@
         <li><a href="askcarl.html#module-askcarl.lightgmm">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     askcarl.mixture
 
       <ul>
         <li><a href="askcarl.html#module-askcarl.mixture">module</a>
+</li>
+      </ul></li>
+      <li>
+    askcarl.utils
+
+      <ul>
+        <li><a href="askcarl.html#module-askcarl.utils">module</a>
 </li>
       </ul></li>
   </ul></td>
@@ -136,11 +144,13 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="askcarl.html#askcarl.mixture.GaussianMixture.components">components (askcarl.mixture.GaussianMixture attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="askcarl.html#askcarl.gaussian.Gaussian.conditional_logpdf">conditional_logpdf() (askcarl.gaussian.Gaussian method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="askcarl.html#askcarl.gaussian.Gaussian.conditional_pdf">conditional_pdf() (askcarl.gaussian.Gaussian method)</a>
+</li>
+      <li><a href="askcarl.html#askcarl.utils.cov_to_prec_cholesky">cov_to_prec_cholesky() (in module askcarl.utils)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -148,8 +158,14 @@
 <h2 id="F">F</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="askcarl.html#askcarl.lightgmm.LightGMM.fit">fit() (askcarl.lightgmm.LightGMM method)</a>
+      <li><a href="askcarl.html#askcarl.lightgmm.LightBaggingGMM.fit">fit() (askcarl.lightgmm.LightBaggingGMM method)</a>
+
+      <ul>
+        <li><a href="askcarl.html#askcarl.lightgmm.LightGMM.fit">(askcarl.lightgmm.LightGMM method)</a>
 </li>
+        <li><a href="askcarl.html#askcarl.lightgmm.LightGMM2.fit">(askcarl.lightgmm.LightGMM2 method)</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="askcarl.html#askcarl.mixture.GaussianMixture.from_pypmc">from_pypmc() (askcarl.mixture.GaussianMixture static method)</a>
@@ -173,13 +189,25 @@
   </ul></td>
 </tr></table>
 
+<h2 id="I">I</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="askcarl.html#askcarl.utils.is_positive_definite">is_positive_definite() (in module askcarl.utils)</a>
+</li>
+  </ul></td>
+</tr></table>
+
 <h2 id="L">L</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="askcarl.html#askcarl.lightgmm.LightBaggingGMM">LightBaggingGMM (class in askcarl.lightgmm)</a>
+</li>
       <li><a href="askcarl.html#askcarl.lightgmm.LightGMM">LightGMM (class in askcarl.lightgmm)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="askcarl.html#askcarl.lightgmm.LightGMM2">LightGMM2 (class in askcarl.lightgmm)</a>
+</li>
       <li><a href="askcarl.html#askcarl.gaussian.Gaussian.logpdf">logpdf() (askcarl.gaussian.Gaussian method)</a>
 
       <ul>
@@ -204,7 +232,15 @@
 </li>
         <li><a href="askcarl.html#module-askcarl.mixture">askcarl.mixture</a>
 </li>
+        <li><a href="askcarl.html#module-askcarl.utils">askcarl.utils</a>
+</li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="askcarl.html#askcarl.utils.mvn_logpdf">mvn_logpdf() (in module askcarl.utils)</a>
+</li>
+      <li><a href="askcarl.html#askcarl.utils.mvn_pdf">mvn_pdf() (in module askcarl.utils)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -227,22 +263,46 @@
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="askcarl.html#askcarl.lightgmm.LightGMM.sample">sample() (askcarl.lightgmm.LightGMM method)</a>
+      <li><a href="askcarl.html#askcarl.lightgmm.LightBaggingGMM.sample">sample() (askcarl.lightgmm.LightBaggingGMM method)</a>
+
+      <ul>
+        <li><a href="askcarl.html#askcarl.lightgmm.LightGMM.sample">(askcarl.lightgmm.LightGMM method)</a>
 </li>
+        <li><a href="askcarl.html#askcarl.lightgmm.LightGMM2.sample">(askcarl.lightgmm.LightGMM2 method)</a>
+</li>
+      </ul></li>
+      <li><a href="askcarl.html#askcarl.lightgmm.LightBaggingGMM.score">score() (askcarl.lightgmm.LightBaggingGMM method)</a>
+
+      <ul>
+        <li><a href="askcarl.html#askcarl.lightgmm.LightGMM.score">(askcarl.lightgmm.LightGMM method)</a>
+</li>
+        <li><a href="askcarl.html#askcarl.lightgmm.LightGMM2.score">(askcarl.lightgmm.LightGMM2 method)</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="askcarl.html#askcarl.lightgmm.LightGMM.score">score() (askcarl.lightgmm.LightGMM method)</a>
+      <li><a href="askcarl.html#askcarl.lightgmm.LightBaggingGMM.score_samples">score_samples() (askcarl.lightgmm.LightBaggingGMM method)</a>
+
+      <ul>
+        <li><a href="askcarl.html#askcarl.lightgmm.LightGMM.score_samples">(askcarl.lightgmm.LightGMM method)</a>
 </li>
-      <li><a href="askcarl.html#askcarl.lightgmm.LightGMM.score_samples">score_samples() (askcarl.lightgmm.LightGMM method)</a>
+        <li><a href="askcarl.html#askcarl.lightgmm.LightGMM2.score_samples">(askcarl.lightgmm.LightGMM2 method)</a>
 </li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="T">T</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="askcarl.html#askcarl.lightgmm.LightGMM.to_sklearn">to_sklearn() (askcarl.lightgmm.LightGMM method)</a>
+      <li><a href="askcarl.html#askcarl.lightgmm.LightBaggingGMM.to_sklearn">to_sklearn() (askcarl.lightgmm.LightBaggingGMM method)</a>
+
+      <ul>
+        <li><a href="askcarl.html#askcarl.lightgmm.LightGMM.to_sklearn">(askcarl.lightgmm.LightGMM method)</a>
 </li>
+        <li><a href="askcarl.html#askcarl.lightgmm.LightGMM2.to_sklearn">(askcarl.lightgmm.LightGMM2 method)</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 

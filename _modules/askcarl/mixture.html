@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>askcarl.mixture &mdash; askcarl 1.2.1 documentation</title>
+  <title>askcarl.mixture &mdash; askcarl 2.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
 
@@ -15,7 +15,7 @@
   
         <script src="../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../_static/documentation_options.js?v=ca842793"></script>
+        <script src="../../_static/documentation_options.js?v=20623aea"></script>
         <script src="../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
@@ -36,7 +36,7 @@
             askcarl
           </a>
               <div class="version">
-                1.2.1
+                2.1.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -110,12 +110,18 @@
 <span class="sd">        list of Gaussian components.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">means</span><span class="p">,</span> <span class="n">covs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">means</span><span class="p">,</span> <span class="n">covs</span><span class="p">,</span> <span class="n">precisions_cholesky</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
         <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">covs</span><span class="p">)</span>
         <span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="n">weights</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">means</span><span class="p">),)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">components</span> <span class="o">=</span> <span class="p">[</span><span class="n">Gaussian</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">cov</span><span class="p">)</span> <span class="k">for</span> <span class="n">mean</span><span class="p">,</span> <span class="n">cov</span><span class="p">,</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">means</span><span class="p">,</span> <span class="n">covs</span><span class="p">,</span> <span class="n">weights</span><span class="p">)</span> <span class="k">if</span> <span class="n">w</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">means</span><span class="p">),)</span>
+        <span class="k">if</span> <span class="n">precisions_cholesky</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">precisions_cholesky_maybe</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">covs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">precisions_cholesky_maybe</span> <span class="o">=</span> <span class="p">(</span><span class="n">precision_cholesky</span><span class="o">.</span><span class="n">T</span> <span class="k">for</span> <span class="n">precision_cholesky</span> <span class="ow">in</span> <span class="n">precisions_cholesky</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">components</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">Gaussian</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">cov</span><span class="p">,</span> <span class="n">precision_cholesky</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">mean</span><span class="p">,</span> <span class="n">cov</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">precision_cholesky</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">means</span><span class="p">,</span> <span class="n">covs</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">precisions_cholesky_maybe</span><span class="p">)</span> <span class="k">if</span> <span class="n">w</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">weights</span> <span class="o">=</span> <span class="n">weights</span><span class="p">[</span><span class="n">weights</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
         <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span>
@@ -150,7 +156,7 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        -----------</span>
-<span class="sd">        mix: `sklearn.mixture.GaussianMixture`</span>
+<span class="sd">        skgmm: `sklearn.mixture.GaussianMixture`</span>
 <span class="sd">            Gaussian mixture.</span>
 
 <span class="sd">        Returns</span>
@@ -160,12 +166,15 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">covariance_type</span> <span class="o">=</span> <span class="n">skgmm</span><span class="o">.</span><span class="n">covariance_type</span>
         <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">skgmm</span><span class="p">,</span> <span class="s1">&#39;_gmm&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;full&#39;</span><span class="p">:</span>
+            <span class="c1"># handle pypmc</span>
             <span class="k">return</span> <span class="n">GaussianMixture</span><span class="p">(</span>
                 <span class="n">weights</span><span class="o">=</span><span class="n">skgmm</span><span class="o">.</span><span class="n">_gmm</span><span class="o">.</span><span class="n">weights</span><span class="p">[</span><span class="mi">0</span><span class="p">,:,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
                 <span class="n">means</span><span class="o">=</span><span class="n">skgmm</span><span class="o">.</span><span class="n">_gmm</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="mi">0</span><span class="p">,:,:,</span><span class="mi">0</span><span class="p">],</span>
                 <span class="n">covs</span><span class="o">=</span><span class="n">skgmm</span><span class="o">.</span><span class="n">_gmm</span><span class="o">.</span><span class="n">covariances</span><span class="o">.</span><span class="n">precisions_cholesky_numpy</span><span class="p">)</span>
+        <span class="n">precisions_cholesky</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;full&#39;</span><span class="p">:</span>
             <span class="n">covs</span> <span class="o">=</span> <span class="n">skgmm</span><span class="o">.</span><span class="n">covariances_</span>
+            <span class="n">precisions_cholesky</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">skgmm</span><span class="p">,</span> <span class="s1">&#39;precisions_cholesky_&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;tied&#39;</span><span class="p">:</span>
             <span class="n">covs</span> <span class="o">=</span> <span class="p">[</span><span class="n">skgmm</span><span class="o">.</span><span class="n">covariances_</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">skgmm</span><span class="o">.</span><span class="n">weights_</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;diag&#39;</span><span class="p">:</span>
@@ -177,7 +186,8 @@
         <span class="k">return</span> <span class="n">GaussianMixture</span><span class="p">(</span>
             <span class="n">weights</span><span class="o">=</span><span class="n">skgmm</span><span class="o">.</span><span class="n">weights_</span><span class="p">,</span>
             <span class="n">means</span><span class="o">=</span><span class="n">skgmm</span><span class="o">.</span><span class="n">means_</span><span class="p">,</span>
-            <span class="n">covs</span><span class="o">=</span><span class="n">covs</span><span class="p">)</span></div>
+            <span class="n">covs</span><span class="o">=</span><span class="n">covs</span><span class="p">,</span>
+            <span class="n">precisions_cholesky</span><span class="o">=</span><span class="n">precisions_cholesky</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="GaussianMixture.pdf">

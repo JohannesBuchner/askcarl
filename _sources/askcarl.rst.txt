@@ -28,6 +28,14 @@ askcarl.mixture module
    :undoc-members:
    :show-inheritance:
 
+askcarl.utils module
+--------------------
+
+.. automodule:: askcarl.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 
