@@ -13,7 +13,7 @@ from sklearn.mixture._gaussian_mixture import _compute_precision_cholesky
 
 from .utils import cov_to_prec_cholesky
 
-__all__ = ["LightGMM", "LightGMM2"]
+__all__ = ["LightGMM", "LightGMM2", "LightBaggingGMM"]
 
 from .utils import mvn_logpdf
 
@@ -508,6 +508,130 @@ class LightGMM2:
         gmm.precisions_cholesky_ = self.precisions_cholesky_
         gmm.covariances_ = self.covariances_
         return gmm
+
+    def score_samples(self, X):
+        """Compute score of samples.
+
+        Parameters
+        ----------
+        X: array
+            data, of shape (N, D)
+
+        Returns
+        -------
+        logprob: array
+            log-probabilities, one entry for each entry in X, of shape (N)
+        """
+        return log_prob_gmm(X, self.means_, self.covariances_, self.weights_)
+
+    def score(self, X, sample_weight=None):
+        """Compute score of samples.
+
+        Parameters
+        ----------
+        X: array
+            data, of shape (N, D)
+        sample_weight: array
+            weights of observations. shape (N,)
+
+        Returns
+        -------
+        logprob: float
+            average log-probabilities, one entry for each entry in X, of shape (N)
+        """
+        return np.average(self.score_samples(X), weights=sample_weight)
+
+    def sample(self, N):
+        """Generate samples from model.
+
+        Parameters
+        ----------
+        N: int
+            number of samples
+
+        Returns
+        -------
+        X: array
+            data, of shape (N, D)
+        """
+        return self.to_sklearn().sample(N)
+
+
+class LightBaggingGMM:
+    """Wrapper which fits B LightGMMs, and averages likelihoods.
+
+    The training data is split into two halfs, and a mixture
+    is built from each half. Then, the weights of the mixture
+    are optimized with the other half. This should avoid overfitting
+    (compared to building a GMM and optimizing on the same data set).
+    """
+
+    def __init__(
+        self, n_gmms, **kwargs
+    ):
+        """Initialise.
+
+        Parameters
+        ----------
+        n_gmms: int
+            number of GMMs.
+        kwargs: dict
+            passed to LightGMM.
+        """
+        self.n_gmms = n_gmms
+        self.gmms = [LightGMM(**kwargs) for i in range(n_gmms)]
+
+    def fit(self, X, sample_weight=None, rng=np.random):
+        """Fit.
+
+        Parameters
+        ----------
+        X: array
+            data, of shape (N, D)
+        sample_weight: array
+            weights of observations. shape (N,)
+        rng: object
+            Random number generator
+        """
+        for gmm in self.gmms:
+            gmm.fit(X=X, sample_weight=sample_weight, rng=rng)
+
+        self.labels_ = gmm.labels_
+        self.weights_ = np.concatenate([gmm.weights_ for gmm in self.gmms]) / 2.0
+        assert self.weights_.shape == (gmm.n_components * self.n_gmms,)
+        self.means_ = np.vstack([gmm.means_ for gmm in self.gmms])
+        assert self.means_.shape == (gmm.n_components * self.n_gmms, X.shape[1])
+        self.precisions_cholesky_ = np.vstack([gmm.precisions_cholesky_ for gmm in self.gmms])
+        assert self.precisions_cholesky_.shape == (gmm.n_components * self.n_gmms, X.shape[1], X.shape[1])
+        self.covariances_ = np.vstack([gmm.covariances_ for gmm in self.gmms])
+        assert self.covariances_.shape == (gmm.n_components * self.n_gmms, X.shape[1], X.shape[1])
+
+        gmm = GaussianMixture(
+            n_components=gmm.n_components,
+            covariance_type='full',
+            warm_start=True,
+            weights_init=self.weights_,
+            means_init=self.means_,
+            precisions_init=self.precisions_cholesky_,
+        )
+        gmm.converged_ = True
+        gmm.lower_bound_ = -np.inf
+        gmm.weights_ = self.weights_
+        gmm.means_ = self.means_
+        gmm.precisions_cholesky_ = self.precisions_cholesky_
+        gmm.covariances_ = self.covariances_
+        self.gmm_ = gmm
+
+    def to_sklearn(self):
+        """Convert to a scikit-learn GaussianMixture object.
+
+        Returns
+        -------
+        gmm: object
+            scikit-learn GaussianMixture
+        """
+        # This does a warm start at the given parameters
+        return self.gmm_
 
     def score_samples(self, X):
         """Compute score of samples.
