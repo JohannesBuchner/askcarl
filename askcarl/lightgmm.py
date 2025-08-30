@@ -104,6 +104,20 @@ def refine_weights_jax(X, means, precisions_cholesky, sample_weight=None):
         list of component weights, of shape (K,)
     """
     def log_prob_fn(mu, prec_chol):
+        """Compute Multivariate Gaussian log-probability density.
+
+        Parameters
+        ----------
+        mu: array
+            mean
+        prec_chol: array
+            component precision matrix
+
+        Returns
+        -------
+        float:
+            log-probability
+        """
         return mvn_logpdf(X, mu, prec_chol)
     # Vectorize over components
     log_probs = (jax.vmap(log_prob_fn, in_axes=(0, 0))(
@@ -121,6 +135,24 @@ def refine_weights_jax(X, means, precisions_cholesky, sample_weight=None):
 
 
 def kmeans_assign_underpopulated_labels(distances, labels, cardinality, min_cluster_size):
+    """Assign more members to underpopulated clusters.
+
+    Parameters
+    ----------
+    distances: array
+        euclidean distance of member to cluster center, of shape (N, K)
+    labels: array
+        member of label
+    cardinality: array
+        number of cluster members for each cluster, of shape (K)
+    min_cluster_size: int
+        minimum number of cluster members, of shape (K)
+
+    Returns
+    -------
+    labels: array
+        modified labels after re-assignment
+    """
     underpopulated = cardinality < min_cluster_size
     for label_to_replace in np.where(underpopulated)[0]:
         # find nearest and assign them to the cluster
@@ -132,6 +164,30 @@ def kmeans_assign_underpopulated_labels(distances, labels, cardinality, min_clus
 
 @partial(jax.jit, static_argnames=['K'])
 def kmeans_assign_labels(X, centroids, K, sample_weight):
+    """Assign members to clusters and compute cluster statistics.
+
+    Parameters
+    ----------
+    X: array
+        data, of shape (N, D)
+    centroids: array
+        cluster centers, of shape (K, D)
+    K: int
+        number of clusters.
+    sample_weight: array
+        weights. shape (N,)
+
+    Returns
+    -------
+    distances: array
+        euclidean distance of member to cluster center, of shape (N, K)
+    labels: array
+        membership for each data point in X, of shape (N,)
+    cardinality: array
+        number of cluster members for each cluster, of shape (K)
+    counts: array
+        cluster weight, of shape (K). If weights are 1 then this is the same as cardinality.
+    """
     # compute distances, update labels, update centers, update labels.
     N, D = X.shape
 
@@ -152,7 +208,27 @@ def kmeans_assign_labels(X, centroids, K, sample_weight):
 
 
 @partial(jax.jit, static_argnames=['K'])
-def kmeans_assign_centroids_from_labels_weighted(X, labels, K, sample_weight):
+def kmeans_compute_cluster_statistics(X, labels, K, sample_weight):
+    """Compute cluster statistics from cluster members.
+
+    Parameters
+    ----------
+    X: array
+        data, of shape (N, D)
+    labels: array
+        membership for each data point in X, of shape (N,)
+    K: int
+        number of clusters.
+    sample_weight: array
+        weights. shape (N,)
+
+    Returns
+    -------
+    centroids: array
+        weighted centroids, of shape (K, D)
+    counts: array
+        cluster weight, of shape (K). If weights are 1 then this is the same as cardinality.
+    """
     N, D = X.shape
     weights = sample_weight[:, None]
     weighted_X = X * weights
@@ -162,6 +238,30 @@ def kmeans_assign_centroids_from_labels_weighted(X, labels, K, sample_weight):
 
 
 def relocate_empty_clusters_dense(X, distances, sample_weight, centers_sum, weight_in_clusters, labels):
+    """Change cluster centroids towards distant cluster members.
+
+    Existing cluster centroids statistics (weight and centers) are modified.
+
+    Parameters
+    ----------
+    X: array
+        data, of shape (N, D)
+    distances: array
+        euclidean distance of member to cluster center, of shape (N, K)
+    sample_weight: array
+        weights. shape (N,)
+    centers_sum: array
+        weighted centroids, of shape (K, D). Warning: *modified in place*
+    weight_in_clusters: array
+        cluster weight, of shape (K).
+    labels: array
+        membership for each data point in X, of shape (N,)
+
+    Returns
+    -------
+    centroids: array
+        updated centroid positions, of shape (K, D)
+    """
     N, D = X.shape
     K, = weight_in_clusters.shape
     assert distances.shape == (N, K)
@@ -195,6 +295,28 @@ def relocate_empty_clusters_dense(X, distances, sample_weight, centers_sum, weig
 
 
 def kmeans_single_iteration(X, centroid_indices, sample_weight=None, min_cluster_size=1):
+    """Update of k-means.
+
+    Parameters
+    ----------
+    X: array
+        data, of shape (N, D)
+    centroid_indices: array
+        indices of X which will serve as initial cluster centroids, of shape (K,)
+    sample_weight: array
+        weights. shape (N,), or None
+    min_cluster_size: int
+        minimum number of cluster members, of shape (K)
+
+    Returns
+    -------
+    labels: array
+        membership for each data point in X, of shape (N,)
+    centroids: array
+        weighted centroids, of shape (K, D).
+    cardinality: array
+        number of cluster members for each cluster, of shape (K)
+    """
     # compute distances, update labels, update centers, update labels.
     N, D = X.shape
     K, = centroid_indices.shape
@@ -205,7 +327,7 @@ def kmeans_single_iteration(X, centroid_indices, sample_weight=None, min_cluster
         X, centers, K=K, sample_weight=sample_weight)
 
     # === M-step: compute cluster sums and counts ===
-    summed, counts = kmeans_assign_centroids_from_labels_weighted(
+    summed, counts = kmeans_compute_cluster_statistics(
         X, labels, K, sample_weight=sample_weight)
 
     # === Handle empty clusters ===
@@ -217,7 +339,41 @@ def kmeans_single_iteration(X, centroid_indices, sample_weight=None, min_cluster
     return labels_final, centers_relocated, cardinality
 
 
-def kmeans_iterate(X, K, sample_weight=None, min_cluster_size=1, rng=np.random, verbose=False):
+def kmeans_iterate(X, K, sample_weight=None, min_cluster_size=1, rng=np.random, verbose=False, TT=None, invTT=None):
+    """Iterate K-means.
+
+    Parameters
+    ----------
+    X: array
+        data, of shape (N, D)
+    K: int
+        number of clusters.
+    sample_weight: array
+        weights. shape (N,)
+    min_cluster_size: int
+        minimum number of cluster members, of shape (K) Returns
+    rng: np.random
+        Pseudo-random number generator to use.
+    verbose: bool
+        whether to print to stdout in case of success or failure
+    TT: array
+        Whitening transform matrix. If none, no whitening is applied.
+    invTT: array
+        Inverse whitening transform matrix. If none, no whitening is applied.
+
+    Returns
+    -------
+    labels: array
+        membership for each data point in X, of shape (N,)
+    centroids: array
+        weighted centroids, of shape (K, D).
+    covariances: array
+        Empirical covariance matrix of the members of each cluster, of shape (K, D, D)
+    precisions_chol: array
+        list of precision matrices of the members of each cluster, of shape (K, D, D)
+    cardinality: array
+        fraction of sample N in each cluster, of shape (K,)
+    """
     N, D = X.shape
     covariances = np.empty((K, D, D))
     precisions_chol = np.empty((K, D, D))
@@ -225,16 +381,25 @@ def kmeans_iterate(X, K, sample_weight=None, min_cluster_size=1, rng=np.random, 
         sample_weight_actual = np.ones(N)
     else:
         sample_weight_actual = sample_weight
+    if TT is None:
+        XT = X
+    else:
+        # apply whitening transform
+        mean = X.mean(axis=0, keepdims=True)
+        XT = (X - mean) @ TT
     while True:
         centroid_indices = rng.choice(N, size=K, replace=False)
         labels, centroids, cardinalities = kmeans_single_iteration(
-            X, centroid_indices, sample_weight=sample_weight_actual, min_cluster_size=min_cluster_size)
+            XT, centroid_indices, sample_weight=sample_weight_actual, min_cluster_size=min_cluster_size)
         # to fail fast, start with the smallest cluster
         order = np.argsort(cardinalities)
         if cardinalities[order[0]] < min_cluster_size:
             if verbose:
                 print('fail, some clusters are too small!', N, D, K, min_cluster_size, cardinalities[order[0]])
             continue
+        if invTT is not None:
+            # reverse whitening transform
+            centroids = centroids @ invTT + mean
         try:
             for k in order:
                 mask = labels == k
@@ -261,7 +426,7 @@ class LightGMM:
     def __init__(
         self, n_components, refine_weights=False,
         init_kwargs=dict(n_init=1, max_iter=1, init='random'),
-        warm_start=False, covariance_type='full'
+        warm_start=False, covariance_type='full', TT=None, invTT=None
     ):
         """Initialise.
 
@@ -277,6 +442,10 @@ class LightGMM:
             not supported, has to be False
         covariance_type: str
             only "full" is supported
+        TT: array
+            Whitening transform matrix to apply when initialising centroids. If none, no whitening is applied.
+        invTT: array
+            Inverse transform of TT.
         """
         assert not warm_start
         assert covariance_type == 'full'
@@ -287,8 +456,21 @@ class LightGMM:
         self.refine_weights = refine_weights
         self.init_kwargs = init_kwargs
         self.initialised = False
+        self.TT = TT
+        self.invTT = invTT
 
     def _cluster(self, X, sample_weight=None, rng=np.random):
+        """Apply clustering.
+
+        Parameters
+        ----------
+        X: array
+            data, of shape (N, D)
+        sample_weight: array
+            weights. shape (N,)
+        rng: np.random
+            Pseudo-random number generator to use.
+        """
         self.kmeans_ = KMeans(**self.init_kwargs).fit(X, sample_weight=sample_weight)
         self.means_ = np.array(self.kmeans_.cluster_centers_)
         self.labels_ = self.kmeans_.labels_
@@ -296,6 +478,15 @@ class LightGMM:
         self.initialised = True
 
     def _characterize_clusters(self, X, sample_weight=None):
+        """Characterize the clusters.
+
+        Parameters
+        ----------
+        X: array
+            data, of shape (N, D)
+        sample_weight: NoneType
+            weights. shape (N,)
+        """
         self.covariances_, well_defined = local_covariances(
             X, self.indices_, self.means_, sample_weight=sample_weight)
 
@@ -329,7 +520,7 @@ class LightGMM:
             self.labels_, self.means_, self.covariances_, self.precisions_cholesky_, self.weights_ = kmeans_iterate(
                 X, self.n_components,
                 sample_weight=sample_weight, rng=rng,
-                min_cluster_size=2)
+                min_cluster_size=2, TT=self.TT, invTT=self.invTT)
             if self.refine_weights:
                 self.weights_ = refine_weights_jax(X, self.means_, self.precisions_cholesky_, sample_weight=sample_weight)
         else:
@@ -431,8 +622,6 @@ class LightGMM2:
         ----------
         n_components: int
             number of Gaussian components.
-        refine_weights: bool
-            whether to include a E step at the end.
         init_kwargs: dict
             arguments passed to KMeans
         warm_start: bool
