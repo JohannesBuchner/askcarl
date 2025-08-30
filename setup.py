@@ -54,5 +54,5 @@ setup(
     tests_require=test_requirements,
     extras_require=dict(plot=['matplotlib', 'scipy']),
     url='https://github.com/JohannesBuchner/askcarl',
-    version='2.1.0',
+    version='2.2.0',
 )
