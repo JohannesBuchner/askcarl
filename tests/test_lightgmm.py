@@ -64,6 +64,23 @@ def test_single_gauss():
         score_ref = gmm_ref.score(X)
         np.testing.assert_allclose(score, score_ref)
 
+def test_whitening():
+    np.random.seed(234)
+    N = 100000
+    for D in [2, 5, 20]:
+        X = np.vstack((np.random.normal(size=(N, D)) + 10, np.random.normal(size=(N, D))))
+        invTT = TT = np.eye(D)
+
+        gmm = LightGMM(2, init_kwargs=dict(n_init=1, max_iter=1000, init='random'))
+        gmm.fit(X, rng=np.random.RandomState(D))
+        gmmT = LightGMM(2, init_kwargs=dict(n_init=1, max_iter=1000, init='random'), TT=TT, invTT=invTT)
+        gmmT.fit(X, rng=np.random.RandomState(D))
+        
+        assert np.all(gmmT.labels_ == gmm.labels_)
+        np.testing.assert_allclose(gmmT.means_, gmm.means_)
+        np.testing.assert_allclose(gmmT.weights_, gmm.weights_)
+        np.testing.assert_allclose(gmmT.score(X), gmm.score(X))
+
 def test_two_gauss():
     np.random.seed(123)
     N = 100000
