@@ -39,7 +39,7 @@ def confidence_contours(pdf, levels=[0.393, 0.675, 0.864]):
 def plot_gmm_corner(
     gmm,
     limits=None,
-    bins=100,
+    bins=20,
     levels=[0.393, 0.675, 0.864],
     fig=None,
     axes=None,
@@ -84,6 +84,8 @@ def plot_gmm_corner(
             std_d = np.sqrt(var_d)
             limits.append((mean_d - 5 * std_d, mean_d + 5 * std_d))
 
+    grids = [np.linspace(lo, hi, bins) for lo, hi in limits]
+
     if fig is None or axes is None:
         fig, axes = plt.subplots(
             n_dim,
@@ -98,7 +100,7 @@ def plot_gmm_corner(
 
             if i == j:
                 # 1D marginal
-                x = np.linspace(*limits[i], bins)
+                x = grids[i]
                 pdf = np.zeros_like(x)
                 for w, mean, cov in zip(gmm.weights_, gmm.means_, gmm.covariances_):
                     pdf += w * multivariate_normal.pdf(x, mean=mean[i], cov=cov[i, i])
@@ -109,8 +111,8 @@ def plot_gmm_corner(
 
             elif j < i:
                 # 2D marginal
-                x = np.linspace(*limits[j], bins)
-                y = np.linspace(*limits[i], bins)
+                x = grids[j]
+                y = grids[i]
                 X, Y = np.meshgrid(x, y)
                 pos = np.dstack((X, Y))
                 pdf = np.zeros_like(X)
@@ -131,7 +133,11 @@ def plot_gmm_corner(
 
             if i == n_dim - 1:
                 ax.set_xlabel(f"x{j}")
+            else:
+                ax.set_xticklabels([])
             if j == 0 and i != 0:
                 ax.set_ylabel(f"x{i}")
+            else:
+                ax.set_yticklabels([])
 
     return fig, axes

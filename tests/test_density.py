@@ -626,7 +626,7 @@ def test_mixture(mixture):
     target_mixture = pypmc.density.mixture.create_gaussian_mixture(
         means, covs, weights)
     pypmc_logp = np.array([target_mixture.evaluate(xi) for xi in x])
-    assert_allclose(askcarl_p, np.exp(pypmc_logp), atol=1e-300, rtol=1.5e-4)
+    assert_allclose(askcarl_p, np.exp(pypmc_logp), atol=1e-300, rtol=1.2e-4)
     assert_allclose(askcarl_logp[pypmc_logp>-100000], pypmc_logp[pypmc_logp>-100000], atol=1)
     assert_allclose(askcarl_logp[askcarl_logp>-100000], askcarl_logp[askcarl_logp>-100000], atol=1)
 
