@@ -44,6 +44,9 @@ def plot_gmm_corner(
     fig=None,
     axes=None,
     color="k",
+    labels=None,
+    truths=None,
+    truths_kw={'color':'tab:blue', 'lw': 1},
 ):
     """
     Analytic corner plot from a Gaussian Mixture model.
@@ -64,6 +67,12 @@ def plot_gmm_corner(
         if provided, plot into these matplotlib axes, otherwise a new one figure is created.
     color: str
         color.
+    labels: list
+        name for each parameter.
+    truths: list
+        list of true values for each parameter.
+    truths_kw: dict
+        arguments passed for styling lines of true parameters.
 
     Returns
     -------
@@ -73,6 +82,19 @@ def plot_gmm_corner(
         second return value of matplotlib.subplots
     """
     n_dim = gmm.means_.shape[1]
+    if labels is None:
+        labels = ['$x_{' + i + '}$' for i in range(n_dim)]
+    else:
+        labels = list(labels)
+        if not len(labels) == n_dim:
+            raise ValueError(f'number of labels ({len(labels)}) should be the same as number of dimensions ({n_dim})')
+    if truths is None:
+        truths = [np.nan for i in range(n_dim)]
+    else:
+        truths = list(truths)
+        if not len(truths) == n_dim:
+            raise ValueError(f'number of labels ({len(truths)}) should be the same as number of dimensions ({n_dim})')
+
     if limits is None:
         # default limits: mean plus-minus 5 std for each dimension
         limits = []
@@ -108,7 +130,12 @@ def plot_gmm_corner(
                 ax.set_ylim(0, None)
                 ax.set_yticks([])
                 ax.set_xlim(limits[i])
+                ylo, yhi = ax.get_ylim()
+                ax.set_ylim(ylo, yhi)
 
+                if np.isfinite(truths[i]):
+                    ax.vlines(truths[i], ylo, yhi, **truths_kw)
+                ax.set_title(labels[i])
             elif j < i:
                 # 2D marginal
                 x = grids[j]
@@ -128,15 +155,19 @@ def plot_gmm_corner(
                 ax.contour(X, Y, pdf, levels=sorted(thresholds), colors=color)
                 ax.set_xlim(limits[j])
                 ax.set_ylim(limits[i])
+                if np.isfinite(truths[i]):
+                    ax.vlines(truths[j], *limits[i], **truths_kw)
+                if np.isfinite(truths[j]):
+                    ax.hlines(truths[i], *limits[j], **truths_kw)
             else:
                 ax.axis("off")
 
             if i == n_dim - 1:
-                ax.set_xlabel(f"x{j}")
+                ax.set_xlabel(labels[j])
             else:
                 ax.set_xticklabels([])
             if j == 0 and i != 0:
-                ax.set_ylabel(f"x{i}")
+                ax.set_ylabel(labels[i])
             else:
                 ax.set_yticklabels([])
 
