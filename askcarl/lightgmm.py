@@ -786,7 +786,7 @@ class LightBaggingGMM:
             gmm.fit(X=X, sample_weight=sample_weight, rng=rng)
 
         self.labels_ = gmm.labels_
-        self.weights_ = np.concatenate([gmm.weights_ for gmm in self.gmms]) / 2.0
+        self.weights_ = np.concatenate([gmm.weights_ for gmm in self.gmms]) / len(self.gmms)
         assert self.weights_.shape == (gmm.n_components * self.n_gmms,)
         self.means_ = np.vstack([gmm.means_ for gmm in self.gmms])
         assert self.means_.shape == (gmm.n_components * self.n_gmms, X.shape[1])

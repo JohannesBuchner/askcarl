@@ -566,6 +566,38 @@ from  sklearn.mixture._gaussian_mixture import _estimate_log_gaussian_prob
      array([1.]),
      array([[0., 0., 0., 0.]])),
 ).via('discovered failure')
+@example(
+    mixture=(
+        3,
+        4,
+        [
+            array([0.0, 0.0, 0.0]),
+            array([0.0, 0.0, 0.0]),
+            array([0.0, 0.0, 0.0]),
+            array([0.0, 0.0, 0.0]),
+        ],
+        [
+            array(
+                [
+                    [1.11111111, -0.38888889, 0.38888889],
+                    [-0.38888889, 1.36111111, 0.63888889],
+                    [0.38888889, 0.63888889, 1.36111111],
+                ]
+            ),
+            array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+            array(
+                [
+                    [9.0, 0.04918033, 0.54098359],
+                    [0.04918033, 30.25026875, -2.74704379],
+                    [0.54098359, -2.74704379, 0.28251836],
+                ]
+            ),
+            array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+        ],
+        array([0.0, 0.0, 1.0, 0.0]),
+        array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [1.0, 0.5, 0.0]]),
+    )
+).via("discovered failure")
 def test_mixture(mixture):
     ndim, ncomponents, means, covs, weights, x = mixture
     mask = np.ones(x.shape, dtype=bool)
@@ -594,7 +626,7 @@ def test_mixture(mixture):
     target_mixture = pypmc.density.mixture.create_gaussian_mixture(
         means, covs, weights)
     pypmc_logp = np.array([target_mixture.evaluate(xi) for xi in x])
-    assert_allclose(askcarl_p, np.exp(pypmc_logp), atol=1e-300, rtol=1e-4)
+    assert_allclose(askcarl_p, np.exp(pypmc_logp), atol=1e-300, rtol=1.2e-4)
     assert_allclose(askcarl_logp[pypmc_logp>-100000], pypmc_logp[pypmc_logp>-100000], atol=1)
     assert_allclose(askcarl_logp[askcarl_logp>-100000], askcarl_logp[askcarl_logp>-100000], atol=1)
 

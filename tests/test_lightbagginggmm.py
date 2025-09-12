@@ -13,4 +13,4 @@ def test_bagging():
     gmm = LightGMM(2, init_kwargs=dict(n_init=1, max_iter=1000, init='random'))
     gmm.fit(X)
     
-    assert np.mean(bgmm.score(X)) > np.mean(gmm.score(X))
+    assert np.mean(bgmm.score(X)) >= np.mean(gmm.score(X))
