@@ -39,6 +39,7 @@ def test_nokmeans():
     gmm = LightGMM(1, init_kwargs=dict(n_init=1, max_iter=1, init='random'))
     gmm.fit(X)
     assert np.all(gmm.labels_ == 0)
+    print(gmm)
 
 def test_single_gauss():
     np.random.seed(234)

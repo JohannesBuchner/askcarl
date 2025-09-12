@@ -459,6 +459,10 @@ class LightGMM:
         self.TT = TT
         self.invTT = invTT
 
+    def __str__(self):
+        """Make string representation."""
+        return f'LightGMM(n_components={self.n_components}, covariance_type={self.covariance_type})'
+
     def _cluster(self, X, sample_weight=None, rng=np.random):
         """Apply clustering.
 
@@ -639,6 +643,10 @@ class LightGMM2:
         self.gmm1 = LightGMM(n_components, init_kwargs=init_kwargs)
         self.gmm2 = LightGMM(n_components, init_kwargs=init_kwargs)
 
+    def __str__(self):
+        """Make string representation."""
+        return f'LightGMM2(n_components={self.n_components}, covariance_type={self.covariance_type})'
+
     def fit(self, X, sample_weight=None, rng=np.random):
         """Fit.
 
@@ -769,6 +777,10 @@ class LightBaggingGMM:
         """
         self.n_gmms = n_gmms
         self.gmms = [LightGMM(**kwargs) for i in range(n_gmms)]
+
+    def __str__(self):
+        """Make string representation."""
+        return f'LightBaggingGMM([{self.gmms[0]}] * {self.n_gmms})'
 
     def fit(self, X, sample_weight=None, rng=np.random):
         """Fit.
