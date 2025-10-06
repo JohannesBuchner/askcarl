@@ -309,7 +309,6 @@ class Gaussian:
         rows_trivial = mask_inf.all(axis=1)
         rows_nontrivial = ~rows_trivial
         if np.any(rows_nontrivial) and cols_keep.any():
-            logcdf_value = np.array(logpdf_value)
             n_keep = cols_keep.sum()
             if n_keep == len(cols_keep):
                 X = x_upper
@@ -323,8 +322,8 @@ class Gaussian:
                 X = x_upper[:, cols_keep]
                 M = conditional_mean[:, cols_keep]
             # Only rows with any finite bounds need the CDF
-            logcdf_value[rows_nontrivial] += dist_reduced.logcdf(X[rows_nontrivial,:] - M[rows_nontrivial,:])
-            return logcdf_value
+            logcdf_value = np.where(rows_nontrivial, dist_reduced.logcdf(X[rows_nontrivial,:] - M[rows_nontrivial,:]), 0)
+            return logcdf_value + logpdf_value
         else:
             return logpdf_value
 
