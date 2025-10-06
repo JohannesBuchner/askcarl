@@ -4,7 +4,7 @@ import numpy as np
 from scipy.linalg import solve
 from scipy.stats import multivariate_normal
 
-from .utils import cov_to_prec_cholesky, mvn_logpdf, mvn_pdf
+from .utils import cov_to_prec_cholesky, mvn_logpdf, mvn_pdf, univariate_normal
 
 
 def pdfcdf(x, mask, mean, cov):
@@ -179,7 +179,9 @@ class Gaussian:
                 assert conditional_cov.shape == (n_upper, n_upper)
 
             # Create the conditional multivariate normal distributions
-            if n_upper > 0:
+            if n_upper == 1:
+                rv = univariate_normal(mean=np.zeros(n_upper), cov=conditional_cov)
+            elif n_upper > 1:
                 rv = multivariate_normal(mean=np.zeros(n_upper), cov=conditional_cov)
             else:
                 rv = None
@@ -258,7 +260,10 @@ class Gaussian:
             pdf_value = 1
         else:
             if prec_chol_exact is None:
-                pdf_value = multivariate_normal(mu_exact, cov_exact).pdf(x_exact)
+                if n_exact == 1:
+                    pdf_value = univariate_normal(mu_exact, cov_exact).pdf(x_exact)
+                else:
+                    pdf_value = multivariate_normal(mu_exact, cov_exact).pdf(x_exact)
             else:
                 pdf_value = mvn_pdf(x_exact, mu_exact, prec_chol_exact)
         assert dist_conditional is not None, (mask, n_upper, n_exact)
@@ -298,13 +303,43 @@ class Gaussian:
             logpdf_value = 0
         else:
             if prec_chol_exact is None:
-                logpdf_value = multivariate_normal(mu_exact, cov_exact).logpdf(x_exact)
+                if n_exact == 1:
+                    logpdf_value = univariate_normal(mu_exact, cov_exact).logpdf(x_exact)
+                else:
+                    logpdf_value = multivariate_normal(mu_exact, cov_exact).logpdf(x_exact)
             else:
                 logpdf_value = mvn_logpdf(x_exact, mu_exact, prec_chol_exact)
         assert dist_conditional is not None, (mask, n_upper, n_exact)
-        logcdf_value = logpdf_value + dist_conditional.logcdf(x_upper - conditional_mean)
 
-        return logcdf_value
+        mask_inf = np.isposinf(x_upper)
+        cols_keep = np.any(~mask_inf, axis=0)
+        # the trivial case is PDF only, because all are uninformative upper limits
+        rows_trivial = mask_inf.all(axis=1)
+        rows_nontrivial = ~rows_trivial
+        if np.any(rows_nontrivial) and cols_keep.any():
+            logcdf_value = np.array(logpdf_value)
+            n_keep = cols_keep.sum()
+            if n_keep == len(cols_keep):
+                X = x_upper
+                dist_reduced = dist_conditional
+                M = conditional_mean
+            elif n_keep == 1:
+                idx = np.where(cols_keep)[0][0]
+                dist_reduced = univariate_normal(0, cov=dist_conditional.cov[idx,idx])
+                X = x_upper[:, idx]
+                M = conditional_mean[:, idx]
+            else:
+                dist_reduced = multivariate_normal(
+                    mean=np.zeros(cols_keep.sum()),
+                    cov=dist_conditional.cov[np.ix_(cols_keep, cols_keep)],
+                    allow_singular=True)
+                X = x_upper[:, cols_keep]
+                M = conditional_mean[:, cols_keep]
+            # Only rows with any finite bounds need the CDF
+            logcdf_value[rows_nontrivial] += dist_reduced.logcdf(X[rows_nontrivial,:] - M[rows_nontrivial,:])
+            return logcdf_value
+        else:
+            return logpdf_value
 
     def pdf(self, x, mask):
         """
@@ -355,6 +390,8 @@ class Gaussian:
         logpdf: array
             logarithm of the probability density. One value for each `x`.
         """
+        if mask is Ellipsis:
+            return self.conditional_logpdf(x, Ellipsis).reshape((len(x),))
         assert mask.shape == (len(x), self.ndim), (mask.shape, (len(x), self.ndim))
         assert x.shape == (len(mask), self.ndim), (x.shape, (len(x), self.ndim))
         powers = (mask * 1) @ self.powers
@@ -364,6 +401,7 @@ class Gaussian:
         logpdf_values = np.zeros(len(x)) * np.nan
         for power, index in zip(unique_powers, unique_indices):
             members = powers == power
+            print('logpdf case:', power, index, members.sum())
             if power == self.allpowers:
                 mask_here = Ellipsis
             else:

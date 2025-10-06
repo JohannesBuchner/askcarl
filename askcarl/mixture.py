@@ -37,6 +37,9 @@ class GaussianMixture:
         self.components = [
             Gaussian(mean, cov, precision_cholesky)
             for mean, cov, w, precision_cholesky in zip(means, covs, weights, precisions_cholesky_maybe) if w > 0]
+        self.powers = self.components[0].powers
+        self.allpowers = self.components[0].allpowers
+        self.ndim = self.components[0].ndim
         self.weights = weights[weights > 0]
         assert len(self.weights) == len(self.components)
         self.log_weights = np.log(self.weights)
@@ -135,7 +138,30 @@ class GaussianMixture:
         logpdf: array
             logarithm of the probability density. One value for each `x`.
         """
-        return logsumexp([
-            w + g.logpdf(x, mask)
-            for w, g in zip(self.log_weights, self.components)],
-            axis=0)
+        if mask is Ellipsis:
+            return logsumexp([
+                w + g.logpdf(x, Ellipsis)
+                for w, g in zip(self.log_weights, self.components)],
+                axis=0)
+        assert mask.shape == (len(x), self.ndim), (mask.shape, (len(x), self.ndim))
+        assert x.shape == (len(mask), self.ndim), (x.shape, (len(x), self.ndim))
+        powers = (mask * 1) @ self.powers
+        unique_powers, unique_indices = np.unique(powers, return_index=True)
+        if len(unique_powers) == 1 and unique_powers[0] == self.allpowers:
+            return logsumexp([
+                w + g.logpdf(x, Ellipsis)
+                for w, g in zip(self.log_weights, self.components)],
+                axis=0)
+        logpdf_values = np.zeros(len(x)) * np.nan
+        for power, index in zip(unique_powers, unique_indices):
+            members = powers == power
+            print('logpdf case:', power, index, members.sum())
+            if power == self.allpowers:
+                mask_here = Ellipsis
+            else:
+                mask_here = mask[index, :]
+            logpdf_values[members] = logsumexp([
+                w + g.conditional_logpdf(x[members,:], mask_here)
+                for w, g in zip(self.log_weights, self.components)],
+                axis=0)
+        return logpdf_values

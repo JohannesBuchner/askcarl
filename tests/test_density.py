@@ -259,12 +259,12 @@ def test_stackoverflow_like_examples(mu, x, eigval, vectors):
 def test_trivial_example():
     x = np.zeros((1, 1))
     g = askcarl.Gaussian(mean=np.zeros(1), cov=np.eye(1))
-    assert_allclose(norm(0, 1).pdf(x), g.conditional_pdf(x, np.array([True])))
+    assert_allclose(norm(0, 1).pdf(x[0]), g.conditional_pdf(x, np.array([True])))
 
     print("zero")
     x = np.zeros((1, 1))
     g = askcarl.Gaussian(mean=np.zeros(1), cov=np.eye(1))
-    assert_allclose(norm(0, 1).cdf(x), g.conditional_pdf(x, np.array([False])))
+    assert_allclose(norm(0, 1).cdf(x[0]), g.conditional_pdf(x, np.array([False])))
 
 
 def test_trivial_mixture():
