@@ -97,8 +97,8 @@ class Gaussian:
 
     def __init__(self, mean, cov, precision_cholesky=None):
         self.ndim = len(mean)
-        self.powers = 2**np.arange(self.ndim)
-        self.allpowers = 2**self.ndim - 1
+        self.powers = (3 ** np.arange(self.ndim, dtype=np.int64))
+        self.allpowers = int(self.powers.sum())
         assert self.allpowers == self.powers.sum()
         self.mean = mean
         self.cov = cov
@@ -184,7 +184,9 @@ class Gaussian:
             if n_upper == 1 and False:
                 rv = univariate_normal(mean=np.zeros(n_upper), cov=conditional_cov)
             elif n_upper > 0:
-                rv = multivariate_normal_shim(mean=np.zeros(n_upper), cov=conditional_cov, precision_cholesky=prec_chol_exact)
+                rv = multivariate_normal_shim(
+                    mean=np.zeros(n_upper), cov=conditional_cov,
+                    precision_cholesky=prec_chol_exact, allow_singular=True)
             else:
                 rv = None
             self.rvs[key] = cov_cross, cov_exact, cov_exact_sol, prec_chol_exact, \
@@ -330,16 +332,21 @@ class Gaussian:
                 X = x_upper[:, idx]
                 M = conditional_mean[:, idx]
             else:
-                dist_reduced = multivariate_normal(
+                cov_remaining = dist_conditional.cov[cols_keep,:][:, cols_keep]
+                prec_chol_exact = cov_to_prec_cholesky(cov_remaining)
+                dist_reduced = multivariate_normal_shim(
                     mean=np.zeros(n_keep),
-                    cov=dist_conditional.cov[cols_keep,:][:, cols_keep],
+                    cov=cov_remaining, precision_cholesky=prec_chol_exact,
                     allow_singular=True)
                 X = x_upper[:, cols_keep]
                 M = conditional_mean[:, cols_keep]
             # Only rows with any finite bounds need the CDF
-            logcdf_value = np.array(logpdf_value)
-            logcdf_value[rows_nontrivial] += dist_reduced.logcdf(X[rows_nontrivial,:] - M[rows_nontrivial,:])
-            return logcdf_value
+            logcdf_value = np.zeros(len(x))
+            logcdf_nontrivial = dist_reduced.logcdf(X[rows_nontrivial,:] - M[rows_nontrivial,:])
+            if np.iscomplexobj(logcdf_nontrivial):
+                logcdf_nontrivial = np.real(logcdf_nontrivial)
+            logcdf_value[rows_nontrivial] += logcdf_nontrivial
+            return logcdf_value + logpdf_value
         else:
             return logpdf_value
 
@@ -363,7 +370,8 @@ class Gaussian:
         assert mask.shape == (len(x), self.ndim), (mask.shape, (len(x), self.ndim))
         assert x.shape == (len(mask), self.ndim), (x.shape, (len(x), self.ndim))
         pdf_values = np.zeros(len(x)) * np.nan
-        powers = np.dot(mask, self.powers)
+        code = mask.astype(np.int64) + 2 * np.isposinf(x).astype(np.int64)
+        powers = code @ self.powers
         unique_powers, unique_indices = np.unique(powers, return_index=True)
         for power, index in zip(unique_powers, unique_indices):
             members = powers == power
@@ -396,7 +404,8 @@ class Gaussian:
             return self.conditional_logpdf(x, Ellipsis).reshape((len(x),))
         assert mask.shape == (len(x), self.ndim), (mask.shape, (len(x), self.ndim))
         assert x.shape == (len(mask), self.ndim), (x.shape, (len(x), self.ndim))
-        powers = (mask * 1) @ self.powers
+        code = mask.astype(np.int64) + 2 * np.isposinf(x).astype(np.int64)
+        powers = code @ self.powers
         unique_powers, unique_indices = np.unique(powers, return_index=True)
         if len(unique_powers) == 1 and unique_powers[0] == self.allpowers:
             return self.conditional_logpdf(x, Ellipsis).reshape((len(x),))

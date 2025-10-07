@@ -145,7 +145,8 @@ class GaussianMixture:
                 axis=0)
         assert mask.shape == (len(x), self.ndim), (mask.shape, (len(x), self.ndim))
         assert x.shape == (len(mask), self.ndim), (x.shape, (len(x), self.ndim))
-        powers = (mask * 1) @ self.powers
+        code = mask.astype(np.int64) + 2 * np.isposinf(x).astype(np.int64)
+        powers = code @ self.powers
         unique_powers, unique_indices = np.unique(powers, return_index=True)
         if len(unique_powers) == 1 and unique_powers[0] == self.allpowers:
             return logsumexp([

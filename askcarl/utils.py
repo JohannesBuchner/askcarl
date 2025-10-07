@@ -181,7 +181,7 @@ class univariate_normal:
 class multivariate_normal:
     """Multivariate normal distribution."""
 
-    def __init__(self, mean, cov, precision_cholesky=None):
+    def __init__(self, mean, cov, precision_cholesky=None, allow_singular=False):
         """Initialise.
 
         Parameters
@@ -193,6 +193,7 @@ class multivariate_normal:
         """
         self.mean = mean
         self.cov = cov
+        self.allow_singular = allow_singular
         self.precision_cholesky = precision_cholesky
         self.rv = None
 
@@ -210,7 +211,8 @@ class multivariate_normal:
             cdf value.
         """
         if self.rv is None:
-            self.rv = scipy.stats.multivariate_normal(self.mean, self.cov)
+            self.rv = scipy.stats.multivariate_normal(
+                self.mean, self.cov, allow_singular=self.allow_singular)
         return self.rv.cdf(x)
 
     def logcdf(self, x):
@@ -227,7 +229,8 @@ class multivariate_normal:
             log(cdf) value.
         """
         if self.rv is None:
-            self.rv = scipy.stats.multivariate_normal(self.mean, self.cov)
+            self.rv = scipy.stats.multivariate_normal(
+                self.mean, self.cov, allow_singular=self.allow_singular)
         return self.rv.logcdf(x)
 
     def pdf(self, x):
@@ -244,7 +247,8 @@ class multivariate_normal:
             pdf value.
         """
         if self.rv is None:
-            self.rv = scipy.stats.multivariate_normal(self.mean, self.cov)
+            self.rv = scipy.stats.multivariate_normal(
+                self.mean, self.cov, allow_singular=self.allow_singular)
         return self.rv.pdf(x)
 
     def logpdf(self, x):
@@ -263,5 +267,6 @@ class multivariate_normal:
         if self.precision_cholesky is not None:
             return mvn_logpdf(x, self.mean, self.precision_cholesky)
         if self.rv is None:
-            self.rv = scipy.stats.multivariate_normal(self.mean, self.cov)
+            self.rv = scipy.stats.multivariate_normal(
+                self.mean, self.cov, allow_singular=self.allow_singular)
         return self.rv.logpdf(x)
