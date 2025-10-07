@@ -3,6 +3,7 @@
 import jax
 import jax.numpy as jnp
 import numpy as np
+import scipy.stats
 from scipy.linalg import cholesky, solve_triangular
 
 # jit-compiled multivariate Gaussian logpdf functions
@@ -124,3 +125,143 @@ def cov_to_prec_cholesky(cov):
     if D not in eyes:
         eyes[D] = np.eye(cov.shape[0])
     return solve_triangular(cholesky(cov, lower=True), eyes[D], lower=True)
+
+
+class univariate_normal:
+    """Univariate normal distribution."""
+
+    def __init__(self, mean, cov):
+        """Initialise.
+
+        Parameters
+        ----------
+        mean: array
+            Mean of Gaussian, of shape (D)
+        cov: array
+            covariance matrix. shape (D, D)
+        """
+        self.mean = mean
+        self.std = float(np.sqrt(cov))
+
+    def cdf(self, x):
+        """Return cumulative probability.
+
+        Parameters
+        ----------
+        x: float
+            position.
+
+        Returns
+        -------
+        float
+            cdf value.
+        """
+        return scipy.special.ndtr((x.flatten() - self.mean) / self.std).reshape(
+            (len(x),)
+        )
+
+    def logcdf(self, x):
+        """Return log of the cumulative probability.
+
+        Parameters
+        ----------
+        x: float
+            position.
+
+        Returns
+        -------
+        float
+            log(cdf) value.
+        """
+        return scipy.special.log_ndtr((x.flatten() - self.mean) / self.std).reshape(
+            (len(x),)
+        )
+
+
+class multivariate_normal:
+    """Multivariate normal distribution."""
+
+    def __init__(self, mean, cov, precision_cholesky=None):
+        """Initialise.
+
+        Parameters
+        ----------
+        mean: array
+            Mean of Gaussian, of shape (D)
+        cov: array
+            covariance matrix. shape (D, D)
+        """
+        self.mean = mean
+        self.cov = cov
+        self.precision_cholesky = precision_cholesky
+        self.rv = None
+
+    def cdf(self, x):
+        """Return cumulative probability.
+
+        Parameters
+        ----------
+        x: float
+            position.
+
+        Returns
+        -------
+        float
+            cdf value.
+        """
+        if self.rv is None:
+            self.rv = scipy.stats.multivariate_normal(self.mean, self.cov)
+        return self.rv.cdf(x)
+
+    def logcdf(self, x):
+        """Return log of the cumulative probability.
+
+        Parameters
+        ----------
+        x: float
+            position.
+
+        Returns
+        -------
+        float
+            log(cdf) value.
+        """
+        if self.rv is None:
+            self.rv = scipy.stats.multivariate_normal(self.mean, self.cov)
+        return self.rv.logcdf(x)
+
+    def pdf(self, x):
+        """Return probability density.
+
+        Parameters
+        ----------
+        x: float
+            position.
+
+        Returns
+        -------
+        float
+            pdf value.
+        """
+        if self.rv is None:
+            self.rv = scipy.stats.multivariate_normal(self.mean, self.cov)
+        return self.rv.pdf(x)
+
+    def logpdf(self, x):
+        """Return log of the probability density.
+
+        Parameters
+        ----------
+        x: float
+            position.
+
+        Returns
+        -------
+        float
+            log(pdf) value.
+        """
+        if self.precision_cholesky is not None:
+            return mvn_logpdf(x, self.mean, self.precision_cholesky)
+        if self.rv is None:
+            self.rv = scipy.stats.multivariate_normal(self.mean, self.cov)
+        return self.rv.logpdf(x)

@@ -155,7 +155,6 @@ class GaussianMixture:
         logpdf_values = np.zeros(len(x)) * np.nan
         for power, index in zip(unique_powers, unique_indices):
             members = powers == power
-            print('logpdf case:', power, index, members.sum())
             if power == self.allpowers:
                 mask_here = Ellipsis
             else:

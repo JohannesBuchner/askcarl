@@ -4,7 +4,9 @@ import numpy as np
 from scipy.linalg import solve
 from scipy.stats import multivariate_normal
 
-from .utils import cov_to_prec_cholesky, mvn_logpdf, mvn_pdf
+from .utils import cov_to_prec_cholesky
+from .utils import multivariate_normal as multivariate_normal_shim
+from .utils import mvn_logpdf, mvn_pdf, univariate_normal
 
 
 def pdfcdf(x, mask, mean, cov):
@@ -179,8 +181,10 @@ class Gaussian:
                 assert conditional_cov.shape == (n_upper, n_upper)
 
             # Create the conditional multivariate normal distributions
-            if n_upper > 0:
-                rv = multivariate_normal(mean=np.zeros(n_upper), cov=conditional_cov)
+            if n_upper == 1 and False:
+                rv = univariate_normal(mean=np.zeros(n_upper), cov=conditional_cov)
+            elif n_upper > 0:
+                rv = multivariate_normal_shim(mean=np.zeros(n_upper), cov=conditional_cov, precision_cholesky=prec_chol_exact)
             else:
                 rv = None
             self.rvs[key] = cov_cross, cov_exact, cov_exact_sol, prec_chol_exact, \
@@ -258,7 +262,10 @@ class Gaussian:
             pdf_value = 1
         else:
             if prec_chol_exact is None:
-                pdf_value = multivariate_normal(mu_exact, cov_exact).pdf(x_exact)
+                if n_exact == 1 and False:
+                    pdf_value = univariate_normal(mu_exact, cov_exact).pdf(x_exact)
+                else:
+                    pdf_value = multivariate_normal(mu_exact, cov_exact).pdf(x_exact)
             else:
                 pdf_value = mvn_pdf(x_exact, mu_exact, prec_chol_exact)
         assert dist_conditional is not None, (mask, n_upper, n_exact)
@@ -298,7 +305,10 @@ class Gaussian:
             logpdf_value = 0
         else:
             if prec_chol_exact is None:
-                logpdf_value = multivariate_normal(mu_exact, cov_exact).logpdf(x_exact)
+                if n_exact == 1 and False:
+                    logpdf_value = univariate_normal(mu_exact, cov_exact).logpdf(x_exact)
+                else:
+                    logpdf_value = multivariate_normal(mu_exact, cov_exact).logpdf(x_exact)
             else:
                 logpdf_value = mvn_logpdf(x_exact, mu_exact, prec_chol_exact)
         assert dist_conditional is not None, (mask, n_upper, n_exact)
@@ -314,16 +324,22 @@ class Gaussian:
                 X = x_upper
                 dist_reduced = dist_conditional
                 M = conditional_mean
+            elif n_keep == 1 and False:
+                idx = np.where(cols_keep)[0][0]
+                dist_reduced = univariate_normal(0, cov=dist_conditional.cov[idx,idx])
+                X = x_upper[:, idx]
+                M = conditional_mean[:, idx]
             else:
                 dist_reduced = multivariate_normal(
-                    mean=np.zeros(cols_keep.sum()),
-                    cov=dist_conditional.cov[np.ix_(cols_keep, cols_keep)],
+                    mean=np.zeros(n_keep),
+                    cov=dist_conditional.cov[cols_keep,:][:, cols_keep],
                     allow_singular=True)
                 X = x_upper[:, cols_keep]
                 M = conditional_mean[:, cols_keep]
             # Only rows with any finite bounds need the CDF
-            logcdf_value = np.where(rows_nontrivial, dist_reduced.logcdf(X[rows_nontrivial,:] - M[rows_nontrivial,:]), 0)
-            return logcdf_value + logpdf_value
+            logcdf_value = np.array(logpdf_value)
+            logcdf_value[rows_nontrivial] += dist_reduced.logcdf(X[rows_nontrivial,:] - M[rows_nontrivial,:])
+            return logcdf_value
         else:
             return logpdf_value
 
@@ -387,7 +403,6 @@ class Gaussian:
         logpdf_values = np.zeros(len(x)) * np.nan
         for power, index in zip(unique_powers, unique_indices):
             members = powers == power
-            print('logpdf case:', power, index, members.sum())
             if power == self.allpowers:
                 mask_here = Ellipsis
             else:

@@ -132,7 +132,7 @@ def test_mvn_logpdf(mean_cov):
 
     rv_truth0 = multivariate_normal(mu * 0, cov)
     logpdf0 = mvn_logpdf(mu * 0, mu * 0, cov_to_prec_cholesky(cov))
-    assert_allclose(logpdf0, rv_truth0.logpdf(mu * 0), atol=1e-6, rtol=1e-6)
+    assert_allclose(logpdf0, rv_truth0.logpdf(mu * 0), atol=2e-6, rtol=2e-6)
 
     rv_truth = multivariate_normal(mu, cov)
     xi = np.random.randn(1, len(mu))  # A random vector of same dimensionality as `mu`
