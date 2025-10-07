@@ -174,14 +174,16 @@ class Gaussian:
                 cov_exact = cov[np.ix_(exact_idx, exact_idx)]  # Covariance for exact values
                 cov_exact_sol = solve(cov_exact, cov_cross, assume_a='pos')
                 conditional_cov = cov_upper - cov_cross.T @ cov_exact_sol
-                try:
-                    prec_chol_exact = cov_to_prec_cholesky(cov_exact)
-                except ValueError:
-                    prec_chol_exact = None
+                prec_chol_exact = None
+                if n_exact > 0:
+                    try:
+                        prec_chol_exact = cov_to_prec_cholesky(cov_exact)
+                    except ValueError:
+                        pass
                 assert conditional_cov.shape == (n_upper, n_upper)
 
             # Create the conditional multivariate normal distributions
-            if n_upper == 1 and False:
+            if n_upper == 1:
                 rv = univariate_normal(mean=np.zeros(n_upper), cov=conditional_cov)
             elif n_upper > 0:
                 rv = multivariate_normal_shim(
@@ -264,7 +266,7 @@ class Gaussian:
             pdf_value = 1
         else:
             if prec_chol_exact is None:
-                if n_exact == 1 and False:
+                if n_exact == 1:
                     pdf_value = univariate_normal(mu_exact, cov_exact).pdf(x_exact)
                 else:
                     pdf_value = multivariate_normal(mu_exact, cov_exact).pdf(x_exact)
@@ -307,7 +309,7 @@ class Gaussian:
             logpdf_value = 0
         else:
             if prec_chol_exact is None:
-                if n_exact == 1 and False:
+                if n_exact == 1:
                     logpdf_value = univariate_normal(mu_exact, cov_exact).logpdf(x_exact)
                 else:
                     logpdf_value = multivariate_normal(mu_exact, cov_exact).logpdf(x_exact)
@@ -315,6 +317,7 @@ class Gaussian:
                 logpdf_value = mvn_logpdf(x_exact, mu_exact, prec_chol_exact)
         assert dist_conditional is not None, (mask, n_upper, n_exact)
 
+        assert x_upper.ndim == 2
         mask_inf = np.isposinf(x_upper)
         cols_keep = np.any(~mask_inf, axis=0)
         # the trivial case is PDF only, because all are uninformative upper limits
@@ -323,14 +326,14 @@ class Gaussian:
         if np.any(rows_nontrivial) and cols_keep.any():
             n_keep = cols_keep.sum()
             if n_keep == len(cols_keep):
-                X = x_upper
+                X = x_upper[rows_nontrivial,:]
                 dist_reduced = dist_conditional
-                M = conditional_mean
-            elif n_keep == 1 and False:
+                M = conditional_mean[rows_nontrivial,:]
+            elif n_keep == 1:
                 idx = np.where(cols_keep)[0][0]
                 dist_reduced = univariate_normal(0, cov=dist_conditional.cov[idx,idx])
-                X = x_upper[:, idx]
-                M = conditional_mean[:, idx]
+                X = x_upper[rows_nontrivial, idx]
+                M = conditional_mean[rows_nontrivial, idx]
             else:
                 cov_remaining = dist_conditional.cov[cols_keep,:][:, cols_keep]
                 prec_chol_exact = cov_to_prec_cholesky(cov_remaining)
@@ -338,11 +341,16 @@ class Gaussian:
                     mean=np.zeros(n_keep),
                     cov=cov_remaining, precision_cholesky=prec_chol_exact,
                     allow_singular=True)
-                X = x_upper[:, cols_keep]
-                M = conditional_mean[:, cols_keep]
+                X = x_upper[:, cols_keep][rows_nontrivial,:]
+                M = conditional_mean[:, cols_keep][rows_nontrivial,:]
             # Only rows with any finite bounds need the CDF
             logcdf_value = np.zeros(len(x))
-            logcdf_nontrivial = dist_reduced.logcdf(X[rows_nontrivial,:] - M[rows_nontrivial,:])
+            try:
+                logcdf_nontrivial = dist_reduced.logcdf(X - M)
+            except ValueError:
+                # invalid construction.
+                # this data point is not possible with this Gaussian.
+                return -np.inf + logcdf_value
             if np.iscomplexobj(logcdf_nontrivial):
                 logcdf_nontrivial = np.real(logcdf_nontrivial)
             logcdf_value[rows_nontrivial] += logcdf_nontrivial
