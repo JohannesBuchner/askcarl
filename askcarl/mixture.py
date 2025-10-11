@@ -18,6 +18,9 @@ class GaussianMixture:
         mean vector for each Gaussian component.
     covs: list
         covariance matrix for each Gaussian component.
+    precisions_cholesky: list
+        Cholesky factors of each precision matrix, each computed with:
+        `solve_triangular(cholesky(cov, lower=True), eyes[D], lower=True)`
 
     Attributes
     -----------
