@@ -196,13 +196,11 @@ class GaussianMixture:
                 continue
 
             nmembers = members.sum()
+            WLB_row = np.full(nmembers, cutoff)
+            WLB_threshold_row = WLB_row
             X_E = x[members][:, mask_here]  # shape (#rows_group, k)
-            WUB = np.empty((self.ncomponents, nmembers))  # weighted upper bounds
-            WLB = np.empty((self.ncomponents, nmembers))  # weighted lower bounds
-            sum_log_diag_per_comp = [
-                self.log_diag[i].sum() if mask_here is Ellipsis
-                else self.log_diag[i][mask_here].sum()
-                for i in range(self.ncomponents)]
+            contrib = np.full((self.ncomponents, nmembers), -np.inf)
+            kept_computed = 0
             # Build per-component upper bounds
             for i, (w, g, lam_min_i, lam_max_i) in enumerate(zip(self.log_weights,
                                                                  self.components,
@@ -216,51 +214,21 @@ class GaussianMixture:
 
                 # Safe upper bound on subspace log-pdf (works for any subspace E)
                 UB = -0.5 * (k * const2pi + k * np.log(lam_min_i) + r2 / lam_max_i)
-                WUB[i, :] = w + UB
+                WUB_i = w + UB
 
-                # Safe lower bound on subspace log-pdf (pure-PDF rows)
-                # Uses Hadamard + eigenvalue bound:
-                # log det Σ_EE <= sum log diag(Σ_EE), and v^T Σ_EE^{-1} v <= ||v||^2 / λ_min_full
-                if pure_pdf and k > 0:
-                    LB = -0.5 * (k * const2pi + sum_log_diag_per_comp[i] + r2 / lam_min_i)
-                    WLB[i, :] = w + LB
-
-            # Relative pruning: keep components whose UB is within `margin` of the best LB per row
-            # L_row is a per-row lower bound on the maximum logpdf across components
-            # Per-row lower bound
-            if pure_pdf:
-                if k == 0:
-                    # exact lower bound is logsumexp(log_weights)
-                    WLB_row = np.full(nmembers, logsumexp(self.log_weights), dtype=float)
-                else:
-                    WLB_row = np.max(WLB, axis=0)
-            else:
-                WLB_row = np.full(nmembers, -np.inf, dtype=float)
-            WLB_threshold_row = np.maximum(cutoff, WLB_row - margin)
-
-            keep_mask = np.logical_and(WUB >= cutoff, WUB >= (WLB_row[None, :] - margin))
-            kept_per_row = keep_mask.sum(axis=0)
-            kept_stat_str = f'{kept_per_row.min()}/{np.median(kept_per_row)}/{kept_per_row.max()}/{keep_mask.sum() / nmembers}'
-            print(
-                power, k, '*' if mask_here is Ellipsis else mask_here * 1,
-                'pdf' if pure_pdf else 'mix',
-                f'{nmembers} members, {kept_stat_str:.1f}/{self.ncomponents} kept')
-            # Now evaluate exactly only for kept pairs; set the rest to -inf
-            contrib = np.full_like(WUB, -np.inf)
-            done = np.zeros(self.ncomponents, dtype=bool)
-            order = np.argsort(-np.max(WUB, axis=1))
-            for i in order:
-                if done[i]:
-                    continue
                 # Skip component entirely if it cannot beat the current threshold for any row
-                if not np.any(WUB[i, :] >= WLB_threshold_row):
+                if not np.any(WUB_i >= WLB_threshold_row):
                     continue
+                kept_computed += 1
                 # Evaluate this component for all members (one call)
                 exact_i = self.log_weights[i] + self.components[i].conditional_logpdf(x[members, :], mask_here)
                 contrib[i, :] = exact_i
-                done[i] = True
                 # Update per-row lower bound and thresholds
                 WLB_row = np.maximum(WLB_row, exact_i)
                 WLB_threshold_row = np.maximum(cutoff, WLB_row - margin)
+            print(
+                power, k, '*' if mask_here is Ellipsis else mask_here * 1,
+                'pdf' if pure_pdf else 'mix',
+                f'{nmembers} members, {kept_computed}/{self.ncomponents} kept')
             logpdf_values[members] = logsumexp(contrib, axis=0)
         return logpdf_values
