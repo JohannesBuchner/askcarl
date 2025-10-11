@@ -180,16 +180,12 @@ class GaussianMixture:
             if power == self.allpowers:
                 mask_here = Ellipsis
                 k = self.ndim
-                pure_pdf = True
             else:
                 mask_here = mask[index, :]
                 k = int(mask_here.sum())
-                digits = (power // self.powers) % 3  # vector of base-3 digits per column
-                pure_pdf = np.all(digits != 0)
 
             if k == 0:
                 # no observed entries -> PDF contributes zero; only CDF terms exist
-                # You can skip to your conditional_logpdf path or set out[members] appropriately
                 logpdf_values[members] = logsumexp([
                     w + g.conditional_logpdf(x[members, :], mask_here)
                     for w, g in zip(self.log_weights, self.components)], axis=0)
@@ -206,11 +202,8 @@ class GaussianMixture:
                                                                  self.components,
                                                                  self.lam_min,
                                                                  self.lam_max)):
-                if k > 0:
-                    v = X_E - g.mean[mask_here][None, :]
-                    r2 = np.sum(v * v, axis=1)
-                else:
-                    r2 = np.zeros(nmembers)
+                v = X_E - g.mean[mask_here][None, :]
+                r2 = np.sum(v * v, axis=1)
 
                 # Safe upper bound on subspace log-pdf (works for any subspace E)
                 UB = -0.5 * (k * const2pi + k * np.log(lam_min_i) + r2 / lam_max_i)
@@ -226,9 +219,9 @@ class GaussianMixture:
                 # Update per-row lower bound and thresholds
                 WLB_row = np.maximum(WLB_row, exact_i)
                 WLB_threshold_row = np.maximum(cutoff, WLB_row - margin)
-            print(
-                power, k, '*' if mask_here is Ellipsis else mask_here * 1,
-                'pdf' if pure_pdf else 'mix',
-                f'{nmembers} members, {kept_computed}/{self.ncomponents} kept')
+            # print(
+            #     power, k, '*' if mask_here is Ellipsis else mask_here * 1,
+            #     'pdf' if pure_pdf else 'mix',
+            #     f'{nmembers} members, {kept_computed}/{self.ncomponents} kept')
             logpdf_values[members] = logsumexp(contrib, axis=0)
         return logpdf_values
