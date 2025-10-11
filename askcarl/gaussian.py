@@ -1,14 +1,68 @@
 """Multivariate Gaussians with support for upper limits and missing data."""
 
 import numpy as np
+from numba import njit
 from scipy.linalg import solve, solve_triangular
 from scipy.stats import multivariate_normal
 
-from .utils import cov_to_prec_cholesky
-from .utils import multivariate_normal as multivariate_normal_shim
-from .utils import mvn_logpdf, mvn_pdf, univariate_normal
+from .utils import (cov_to_prec_cholesky, multivariate_normal0, mvn_logpdf,
+                    mvn_pdf, univariate_normal)
 
 const2pi = np.log(2.0 * np.pi)
+
+
+@njit
+def extract_blocks(n_exact, n_upper, cov, mask):
+    """Partition covariance matrix according to mask.
+
+    Parameters
+    ----------
+    n_exact: int
+        `mask.sum()`
+    n_upper: int
+        `(~mask).sum()`
+    cov: array
+        covariance matrix
+    mask: array
+        boolean array
+
+    Returns
+    -------
+    cov_upper: array
+        `cov[non_mask,:][:,non_mask]`, Covariance for upper bounds
+    cov_cross: array
+        `cov[mask,:][:, non_mask]`, Cross-covariance between exact and upper bounds
+    cov_exact: array
+        `cov[mask,:][:, mask], Covariance for exact values
+    """
+    n = cov.shape[0]
+    cov_exact = np.empty((n_exact, n_exact), cov.dtype)
+    cov_upper = np.empty((n_upper, n_upper), cov.dtype)
+    cov_cross = np.empty((n_exact, n_upper), cov.dtype)
+
+    n_i = 0  # row counter for exact block
+    n_I = 0  # row counter for upper block
+
+    for i in range(n):
+        if mask[i]:
+            n_j = 0  # col counter for exact block
+            n_J = 0  # col counter for cross block
+            for j in range(n):
+                if mask[j]:
+                    cov_exact[n_i, n_j] = cov[i, j]
+                    n_j += 1
+                else:
+                    cov_cross[n_i, n_J] = cov[i, j]
+                    n_J += 1
+            n_i += 1
+        else:
+            n_J = 0
+            for j in range(n):
+                if not mask[j]:
+                    cov_upper[n_I, n_J] = cov[i, j]
+                    n_J += 1
+            n_I += 1
+    return cov_exact, cov_upper, cov_cross
 
 
 def pdfcdf(x, mask, mean, cov):
@@ -120,7 +174,7 @@ class Gaussian:
             self.logdet_precision = 2.0 * np.sum(np.log(np.diag(self.precision_cholesky)))
             self.precision = self.precision_cholesky.T @ self.precision_cholesky
 
-    def get_conditional_rv(self, mask):
+    def get_conditional_rv(self, mask, key=None):
         """Build conditional distribution.
 
         Parameters
@@ -141,18 +195,19 @@ class Gaussian:
             Multivariate Normal Distribution of the upper bound dimensions,
             conditioned with `mask`.
         """
-        if mask is Ellipsis:
-            key = self.allpowers
-        else:
-            key = self.powers[mask].sum()
-            assert mask.shape == (self.ndim,), (self.ndim, mask.shape)
+        if key is None:
+            if mask is Ellipsis:
+                key = self.allpowers
+            else:
+                key = self.powers[mask].sum()
+                assert mask.shape == (self.ndim,), (self.ndim, mask.shape)
         if key not in self.rvs:
             cov = self.cov
             if mask is Ellipsis:
                 n_exact = self.ndim
                 n_upper = 0
                 exact_idx = None
-                upper_idx = []
+                upper_idx = None
                 mu_exact = self.mean
                 mu_upper = upper_idx
 
@@ -165,10 +220,10 @@ class Gaussian:
                 cov_cross = None
             else:
                 non_mask = ~mask
-                exact_idx, = np.where(mask)  # Indices of exact values (PDF)
-                upper_idx, = np.where(~mask)  # Indices of upper bounds (CDF)
-                n_exact = len(exact_idx)
-                n_upper = len(upper_idx)
+                exact_idx = None
+                upper_idx = None
+                n_exact = mask.sum()
+                n_upper = self.ndim - n_exact
 
                 # Partition mean and covariance matrix accordingly
                 mu_exact = self.mean[mask]  # Mean for exact values
@@ -176,12 +231,15 @@ class Gaussian:
 
                 # Compute the conditional mean and covariance as a function of the upper bounds dimensions
                 # this is conditioned at the position of the exact coordinates.
-                cov_upper = cov[non_mask,:][:,non_mask]  # Covariance for upper bounds
-                cov1 = cov[mask,:]
-                cov_cross = cov1[:, non_mask]  # Cross-covariance between exact and upper bounds
+                if False:
+                    cov_upper = cov[non_mask,:][:,non_mask]  # Covariance for upper bounds
+                    cov1 = cov[mask,:]
+                    cov_cross = cov1[:, non_mask]  # Cross-covariance between exact and upper bounds
 
-                # Extract values from x
-                cov_exact = cov1[:, mask]  # Covariance for exact values
+                    # Extract values from x
+                    cov_exact = cov1[:, mask]  # Covariance for exact values
+                else:
+                    cov_exact, cov_upper, cov_cross = extract_blocks(n_exact, n_upper, cov, mask)
                 cov_exact_sol = solve(cov_exact, cov_cross, assume_a='pos')
                 conditional_cov = cov_upper - cov_cross.T @ cov_exact_sol
                 prec_chol_exact = None
@@ -197,8 +255,8 @@ class Gaussian:
             if n_upper == 1:
                 rv = univariate_normal(mean=np.zeros(n_upper), cov=conditional_cov)
             elif n_upper > 0:
-                rv = multivariate_normal_shim(
-                    mean=np.zeros(n_upper), cov=conditional_cov,
+                rv = multivariate_normal0(
+                    cov=conditional_cov,
                     precision_cholesky=prec_chol_exact, allow_singular=True)
             else:
                 rv = None
@@ -207,57 +265,38 @@ class Gaussian:
 
         return self.rvs[key]
 
-    def _get_prec_upper_factor(self, key, upper_idx):
-        # Cache the Cholesky of Λ_UU and its log determinant per missing pattern
-        if key in self.prec_upper_cache:
-            return self.prec_upper_cache[key]
-        if len(upper_idx) == 0:
-            self.prec_upper_cache[key] = (None, 0.0)
-            return self.prec_upper_cache[key]
-        # Principal submatrix Λ_UU
-        Lambda_UU = self.precision[np.ix_(upper_idx, upper_idx)]
-        R_UU = np.linalg.cholesky(Lambda_UU)
-        logdet_UU = 2.0 * np.sum(np.log(np.diag(R_UU)))
-        self.prec_upper_cache[key] = (R_UU, logdet_UU)
-        return self.prec_upper_cache[key]
-
-    def _marginal_logpdf_precision(self, x_exact, mu_exact, exact_idx, upper_idx, key):
+    def _marginal_logpdf_precision(self, x_exact, mu_exact, exact_idx, upper_idx, key, mask):
         # Marginal logpdf over observed E using global Λ = R^T R
         # Requires: self.precision_cholesky, self.logdet_precision, self.precision
         R = self.precision_cholesky
-        m = x_exact.shape[0]       # number of rows in this group
-        n = self.ndim
-        # Residuals v_E
-        v_E = x_exact - mu_exact.reshape((1, -1))
-        # Build s with s_E = v_E, s_U = 0, shape (n, m)
-        S = np.zeros((n, m), dtype=x_exact.dtype)
-        S[exact_idx, :] = v_E.T
-        # b = Λ s = R^T (R s)
-        T = R @ S
-        B = R.T @ T
-        b_E = B[exact_idx, :].T    # (m, |E|)
-        if len(upper_idx) == 0:
-            c_E = np.zeros_like(b_E)
-            logdet_UU = 0.0
-        else:
-            R_UU, logdet_UU = self._get_prec_upper_factor(key, upper_idx)
-            # Solve Λ_UU y_U = b_U for multiple RHS
-            b_U = B[upper_idx, :]   # (|U|, m)
-            z = solve_triangular(R_UU, b_U, lower=True, check_finite=False)
-            y_U = solve_triangular(R_UU.T, z, lower=False, check_finite=False)
-            # c = Λ u with u_U = y_U, u_E = 0
-            Umat = np.zeros((n, m), dtype=x_exact.dtype)
-            Umat[upper_idx, :] = y_U
-            T2 = R @ Umat
-            C = R.T @ T2
-            c_E = C[exact_idx, :].T
-        # Quadratic form v_E^T (b_E - c_E)
-        q = np.einsum('ij,ij->i', v_E, b_E - c_E)
+        # Select columns for observed and missing sets
+        R_E = R[:, mask]         # shape (n, |E|)
+        R_U = R[:, ~mask]         # shape (n, |U|)
+        # Small precision blocks via Gram matrices
+        Lambda_EE = R_E.T @ R_E       # (|E|, |E|)
+        Lambda_EU = R_E.T @ R_U       # (|E|, |U|)
+        Lambda_UU = R_U.T @ R_U       # (|U|, |U|)
+        # Cholesky of Λ_UU (lower)
+        L_UU = np.linalg.cholesky(Lambda_UU)
+        logdet_UU = 2.0 * np.sum(np.log(np.diag(L_UU)))
+        # Residuals on E
+        v_E = x_exact - mu_exact[None, :]      # (m, |E|)
+        # b_E = v_E @ Λ_EE
+        b_E = v_E @ Lambda_EE                  # (m, |E|)
+        # b_U^T = v_E @ Λ_EU  => b_U has shape (|U|, m) after transpose
+        b_U_T = v_E @ Lambda_EU                # (m, |U|)
+        # Solve Λ_UU y_U = b_U for multiple RHS using L_UU
+        z = solve_triangular(L_UU, b_U_T.T, lower=True)
+        y_U = solve_triangular(L_UU.T, z, lower=False)
+        # c_E = (Λ_EU @ y_U)^T = y_U^T @ Λ_EU^T
+        c_E = y_U.T @ Lambda_EU.T              # (m, |E|)
+        # Quadratic form per row
+        q = np.sum(v_E * (b_E - c_E), axis=1)
         # log det Σ_EE = − log det Λ + log det Λ_UU
         logdet_Sigma_EE = -self.logdet_precision + logdet_UU
         return -0.5 * (q + logdet_Sigma_EE + v_E.shape[1] * const2pi)
 
-    def _prepare_conditional_pdf(self, x, mask=Ellipsis):
+    def _prepare_conditional_pdf(self, x, mask=Ellipsis, key=None):
         """
         Compute the mixed PDF and CDF for a multivariate Gaussian distribution.
 
@@ -274,7 +313,7 @@ class Gaussian:
         """
         cov_cross, cov_exact, cov_exact_sol, prec_chol_exact, dist_conditional, \
             exact_idx, upper_idx, n_exact, n_upper, mu_exact, mu_upper = \
-            self.get_conditional_rv(mask)
+            self.get_conditional_rv(mask, key)
         if n_upper == 0:
             x_exact = x
             # If there are no upper bounds, the conditional mean and cov are just the original ones
@@ -293,7 +332,7 @@ class Gaussian:
         return n_upper, n_exact, cov_cross, cov_exact, cov_exact_sol, prec_chol_exact, \
             x_exact, x_upper, mu_exact, mu_upper, exact_idx, upper_idx, conditional_mean, dist_conditional
 
-    def conditional_pdf(self, x, mask=Ellipsis):
+    def conditional_pdf(self, x, mask=Ellipsis, key=None):
         """
         Compute conditional PDF.
 
@@ -320,7 +359,7 @@ class Gaussian:
 
         n_upper, n_exact, cov_cross, cov_exact, cov_exact_sol, prec_chol_exact, \
             x_exact, x_upper, mu_exact, mu_upper, exact_idx, upper_idx, conditional_mean, dist_conditional = \
-            self._prepare_conditional_pdf(x=x, mask=mask)
+            self._prepare_conditional_pdf(x=x, mask=mask, key=key)
 
         if n_exact == 0:
             # trivial case: CDF only
@@ -338,7 +377,7 @@ class Gaussian:
 
         return cdf_value
 
-    def conditional_logpdf(self, x, mask=Ellipsis):
+    def conditional_logpdf(self, x, mask=Ellipsis, key=None):
         """
         Compute conditional log-PDF.
 
@@ -365,17 +404,18 @@ class Gaussian:
 
         n_upper, n_exact, cov_cross, cov_exact, inv_cov_exact, prec_chol_exact, \
             x_exact, x_upper, mu_exact, mu_upper, exact_idx, upper_idx, conditional_mean, dist_conditional = \
-            self._prepare_conditional_pdf(x=x, mask=mask)
+            self._prepare_conditional_pdf(x=x, mask=mask, key=key)
         if n_exact == 0:
             # trivial case: CDF only
             logpdf_value = 0
         else:
             if self.precision_cholesky is not None:
-                key = self.allpowers if (mask is Ellipsis) else self.powers[mask].sum()
+                if key is None:
+                    key = self.allpowers if (mask is Ellipsis) else self.powers[mask].sum()
                 # Use global precision-based marginal over observed E
                 logpdf_value = self._marginal_logpdf_precision(
                     x_exact=x_exact, mu_exact=mu_exact,
-                    exact_idx=exact_idx, upper_idx=upper_idx, key=key)
+                    exact_idx=exact_idx, upper_idx=upper_idx, key=key, mask=mask)
             else:
                 # Fallback to covariance-based path
                 if prec_chol_exact is None:
@@ -407,8 +447,7 @@ class Gaussian:
             else:
                 cov_remaining = dist_conditional.cov[cols_keep,:][:, cols_keep]
                 prec_chol_exact = cov_to_prec_cholesky(cov_remaining)
-                dist_reduced = multivariate_normal_shim(
-                    mean=np.zeros(n_keep),
+                dist_reduced = multivariate_normal0(
                     cov=cov_remaining, precision_cholesky=prec_chol_exact,
                     allow_singular=True)
                 X = x_upper[:, cols_keep][rows_nontrivial,:]
@@ -457,7 +496,7 @@ class Gaussian:
                 mask_here = Ellipsis
             else:
                 mask_here = mask[index, :]
-            pdf_values[members] = self.conditional_pdf(x[members,:], mask_here)
+            pdf_values[members] = self.conditional_pdf(x[members,:], mask_here, key=power)
         assert np.isfinite(pdf_values).all(), pdf_values
         return pdf_values
 
@@ -494,5 +533,5 @@ class Gaussian:
                 mask_here = Ellipsis
             else:
                 mask_here = mask[index, :]
-            logpdf_values[members] = self.conditional_logpdf(x[members,:], mask_here)
+            logpdf_values[members] = self.conditional_logpdf(x[members,:], mask_here, key=power)
         return logpdf_values

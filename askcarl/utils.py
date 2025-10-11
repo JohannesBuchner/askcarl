@@ -56,7 +56,7 @@ def mvn_logpdf(X, mean, prec_chol):
     logprob: array
         log-probability, one entry for each entry in X, of shape (N)
     """
-    key = X.shape[-1]
+    key = (X.shape[-1], mean is None)
     if key not in mvn_logpdf_functions:
         mvn_logpdf_functions[key] = jax.jit(_mvn_logpdf)
     return mvn_logpdf_functions[key](X, mean, prec_chol)
@@ -178,10 +178,10 @@ class univariate_normal:
         )
 
 
-class multivariate_normal:
+class multivariate_normal0:
     """Multivariate normal distribution."""
 
-    def __init__(self, mean, cov, precision_cholesky=None, allow_singular=False):
+    def __init__(self, cov, precision_cholesky=None, allow_singular=False):
         """Initialise.
 
         Parameters
@@ -191,7 +191,6 @@ class multivariate_normal:
         cov: array
             covariance matrix. shape (D, D)
         """
-        self.mean = mean
         self.cov = cov
         self.allow_singular = allow_singular
         self.precision_cholesky = precision_cholesky
@@ -212,7 +211,7 @@ class multivariate_normal:
         """
         if self.rv is None:
             self.rv = scipy.stats.multivariate_normal(
-                self.mean, self.cov, allow_singular=self.allow_singular)
+                np.zeros(len(self.cov)), self.cov, allow_singular=self.allow_singular)
         return self.rv.cdf(x)
 
     def logcdf(self, x):
@@ -230,7 +229,7 @@ class multivariate_normal:
         """
         if self.rv is None:
             self.rv = scipy.stats.multivariate_normal(
-                self.mean, self.cov, allow_singular=self.allow_singular)
+                np.zeros(len(self.cov)), self.cov, allow_singular=self.allow_singular)
         return self.rv.logcdf(x)
 
     def pdf(self, x):
@@ -248,7 +247,7 @@ class multivariate_normal:
         """
         if self.rv is None:
             self.rv = scipy.stats.multivariate_normal(
-                self.mean, self.cov, allow_singular=self.allow_singular)
+                np.zeros(len(self.cov)), self.cov, allow_singular=self.allow_singular)
         return self.rv.pdf(x)
 
     def logpdf(self, x):
@@ -265,8 +264,8 @@ class multivariate_normal:
             log(pdf) value.
         """
         if self.precision_cholesky is not None:
-            return mvn_logpdf(x, self.mean, self.precision_cholesky)
+            return mvn_logpdf(x, 0, self.precision_cholesky)
         if self.rv is None:
             self.rv = scipy.stats.multivariate_normal(
-                self.mean, self.cov, allow_singular=self.allow_singular)
+                np.zeros(len(self.cov)), self.cov, allow_singular=self.allow_singular)
         return self.rv.logpdf(x)

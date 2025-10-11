@@ -217,7 +217,7 @@ class GaussianMixture:
                     continue
                 kept_computed += 1
                 # Evaluate this component for all members (one call)
-                exact_i = self.log_weights[i] + self.components[i].conditional_logpdf(x[members, :], mask_here)
+                exact_i = self.log_weights[i] + self.components[i].conditional_logpdf(x[members, :], mask_here, key=power)
                 contrib[i, :] = exact_i
                 # Update per-row lower bound and thresholds
                 WLB_row = np.maximum(WLB_row, exact_i)
