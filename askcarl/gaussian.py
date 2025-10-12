@@ -207,7 +207,44 @@ class Gaussian:
 
         return self.rvs[key]
 
-    def _marginal_logpdf_precision(self, x_exact, mu_exact, exact_idx, upper_idx, mask):
+    def _marginal_logpdf_precision_single(self, x_exact, mu_exact, mask, Umask, has_upper):
+        # Fast path for a single row (x_exact.shape[0] == 1)
+        # Λ = R^T R, where R is lower-triangular inverse Cholesky of cov
+        R = self.precision_cholesky
+        n = self.ndim
+        # Residuals on observed dims
+        v_E = (x_exact - mu_exact).astype(R.dtype)  # shape (|E|,)
+        # Build s ∈ R^n with s_E = v_E, s_U = 0
+        s = np.zeros(n, dtype=R.dtype)
+        s[mask] = v_E
+        # b = Λ s = R^T (R s)
+        t = R @ s
+        b = R.T @ t
+        b_E = b[mask]
+        if has_upper:
+            # Factor Λ_UU = R_U^T R_U
+            R_U = R[:, Umask]
+            L_UU = np.linalg.cholesky(R_U.T @ R_U)  # lower-triangular
+            logdet_UU = 2.0 * np.sum(np.log(np.diag(L_UU)))
+            # Solve Λ_UU y_U = b_U
+            b_U = b[Umask]
+            z = solve_triangular(L_UU, b_U, lower=True, check_finite=False)
+            y_U = solve_triangular(L_UU.T, z, lower=False, check_finite=False)
+            # c = Λ u with u_U = y_U, u_E = 0
+            u = np.zeros(n, dtype=R.dtype)
+            u[Umask] = y_U
+            c = R.T @ (R @ u)
+            c_E = c[mask]
+        else:
+            logdet_UU = 0.0
+            c_E = 0.0
+        # Quadratic form and logdet
+        q = float(np.dot(v_E, b_E - c_E))
+        logdet_Sigma_EE = -self.logdet_precision + logdet_UU
+        k = v_E.shape[0]
+        return -0.5 * (q + logdet_Sigma_EE + k * const2pi)
+
+    def _marginal_logpdf_precision(self, x_exact, mu_exact, exact_idx, upper_idx, key, mask):
         # Marginal logpdf over observed E using global Λ = R^T R
         # Requires: self.precision_cholesky, self.logdet_precision, self.precision
         R = self.precision_cholesky
@@ -346,6 +383,22 @@ class Gaussian:
             else:
                 return multivariate_normal(np.zeros(self.ndim), self.cov).logpdf(x - self.mean.reshape((1, -1)))
 
+        n_rows = x.shape[0]
+        Umask = ~mask
+        exact_idx = np.flatnonzero(mask)
+        x_exact = x[:, exact_idx]
+        n_exact = len(exact_idx)
+        mu_exact = self.mean[exact_idx]
+        if n_rows == 1:
+            # Single-row special cases
+            if n_exact == self.ndim:
+                # Pure-PDF over observed subset
+                return self._marginal_logpdf_precision_single(x_exact[0], mu_exact, mask, Umask, False)[None]
+            else:
+                # Check if all upper bounds are +inf for this one row
+                x_upper = x[:, Umask]
+                if np.isposinf(x_upper).all():
+                    return self._marginal_logpdf_precision_single(x_exact[0], mu_exact, mask, Umask, True)[None]
         n_upper, n_exact, cov_cross, cov_exact, inv_cov_exact, prec_chol_exact, \
             x_exact, x_upper, mu_exact, mu_upper, exact_idx, upper_idx, conditional_mean, dist_conditional = \
             self._prepare_conditional_pdf(x=x, mask=mask, key=key)
@@ -359,7 +412,7 @@ class Gaussian:
                 # Use global precision-based marginal over observed E
                 logpdf_value = self._marginal_logpdf_precision(
                     x_exact=x_exact, mu_exact=mu_exact,
-                    exact_idx=exact_idx, upper_idx=upper_idx, mask=mask)
+                    exact_idx=exact_idx, upper_idx=upper_idx, key=key, mask=mask)
             else:
                 # Fallback to covariance-based path
                 if prec_chol_exact is None:
