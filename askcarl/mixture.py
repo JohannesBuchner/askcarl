@@ -195,36 +195,10 @@ class GaussianMixture:
                 continue
 
             nmembers = members.sum()
-            WLB_row = np.full(nmembers, cutoff)
-            WLB_threshold_row = WLB_row
-            X_E = x[members][:, mask_here]  # shape (#rows_group, k)
             contrib = np.full((self.ncomponents, nmembers), -np.inf)
-            kept_computed = 0
             # Build per-component upper bounds
-            for i, (w, g, lam_min_i, lam_max_i) in enumerate(zip(self.log_weights,
-                                                                 self.components,
-                                                                 self.lam_min,
-                                                                 self.lam_max)):
-                v = X_E - g.mean[mask_here][None, :]
-                r2 = np.sum(v * v, axis=1)
-
-                # Safe upper bound on subspace log-pdf (works for any subspace E)
-                UB = -0.5 * (k * const2pi + k * np.log(lam_min_i) + r2 / lam_max_i)
-                WUB_i = w + UB
-
-                # Skip component entirely if it cannot beat the current threshold for any row
-                if not np.any(WUB_i >= WLB_threshold_row):
-                    continue
-                kept_computed += 1
+            for i, (w, g) in enumerate(zip(self.log_weights, self.components)):
                 # Evaluate this component for all members (one call)
-                exact_i = self.log_weights[i] + self.components[i].conditional_logpdf(x[members, :], mask_here, key=power)
-                contrib[i, :] = exact_i
-                # Update per-row lower bound and thresholds
-                WLB_row = np.maximum(WLB_row, exact_i)
-                WLB_threshold_row = np.maximum(cutoff, WLB_row - margin)
-            # print(
-            #     power, k, '*' if mask_here is Ellipsis else mask_here * 1,
-            #     'pdf' if pure_pdf else 'mix',
-            #     f'{nmembers} members, {kept_computed}/{self.ncomponents} kept')
+                contrib[i, :] = w + g.conditional_logpdf(x[members, :], mask_here, key=power)
             logpdf_values[members] = logsumexp(contrib, axis=0)
         return logpdf_values
