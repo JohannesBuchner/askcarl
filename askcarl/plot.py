@@ -332,8 +332,8 @@ def plot_gmm_corner(
     labels=None,
     truths=None,
     truths_kw={"color": "tab:blue", "lw": 1},
-    max_err_frac=0.10,
-    max_err_frac_eps=10,
+    max_err_frac=0.00,
+    max_err_frac_eps=20,
     overlap_prevention_factor=2.0,
     linewidth=1,
 ):
@@ -475,7 +475,7 @@ def plot_gmm_corner(
                 for w, mean, cov in zip(gmm.weights_, gmm.means_, gmm.covariances_):
                     mean_2d = [mean[j], mean[i]]
                     cov_2d = cov[[j, i]][:, [j, i]]
-                    pdf += w * multivariate_normal.pdf(pos, mean=mean_2d, cov=cov_2d)
+                    pdf += w * multivariate_normal.pdf(pos, mean=mean_2d, cov=cov_2d, allow_singular=True)
 
                 # Compute contour thresholds
                 thresholds = confidence_contours(pdf, levels=levels)
@@ -518,7 +518,7 @@ def plot_gmm_corner(
                         last_performance = 1.0
                         last_scale = 0.0
 
-                        max_scale = float(D2_members.max())
+                        max_scale = min(bins * 2, float(D2_members.max()))
                         # Scan increasing D^2 threshold; stop when F1 starts decreasing
                         for scale in np.arange(0.25, max_scale + 0.25, 0.25):
                             errfrac_new = evaluate_classification(D2 <= scale, mask, P, max_err_frac_eps)
@@ -582,7 +582,7 @@ def plot_gmm_corner(
                         continue
 
                     # Final acceptance based on union misclassification fraction
-                    print(t, "error fraction:", errfrac_curr)
+                    # print(t, "error fraction:", errfrac_curr)
                     if errfrac_curr <= max_err_frac:
                         patches = []
                         for mean_2d, cov_2d, scale in selected:
@@ -612,7 +612,7 @@ def plot_gmm_corner(
                         Y,
                         pdf,
                         levels=sorted(remaining_thresholds),
-                        linewidths=[linewidth * 2] * len(remaining_thresholds),
+                        linewidths=[linewidth] * len(remaining_thresholds),
                         colors=color,
                     )
 
