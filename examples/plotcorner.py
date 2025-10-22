@@ -15,17 +15,21 @@ X = np.vstack([
 
 # Corner-style plot with confidence contours
 
-t0 = time.time()
-corner.corner(X, plot_datapoints=False, plot_density=False, levels=[0.393, 0.675, 0.864])
-print('corner:', time.time() - t0)
-plt.savefig('plotcorner1.pdf')
-plt.close()
+#t0 = time.time()
+#corner.corner(X, plot_datapoints=False, plot_density=False, levels=[0.393, 0.675, 0.864])
+#plt.savefig('plotcorner1.pdf')
+#plt.close()
+#print('corner:', time.time() - t0)
 
 t0 = time.time()
 lgmm = LightBaggingGMM(n_gmms=20, n_components=10)
 lgmm.fit(X)
 gmm = lgmm.to_sklearn()
+print('LightBaggingGMM fit:', time.time() - t0)
 
-fig, axes = plot_gmm_corner(gmm, levels=[0.393, 0.675, 0.864])
-print('LightBaggingGMM:', time.time() - t0)
-plt.savefig('plotcorner.pdf')
+for i in range(100):
+    t0 = time.time()
+    fig, axes = plot_gmm_corner(gmm, levels=[0.393, 0.675, 0.864])
+    plt.savefig('plotcorner.pdf')
+    plt.close()
+    print('GMM plot:', time.time() - t0)
