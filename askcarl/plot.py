@@ -296,6 +296,31 @@ def ellipses_overlap_analytic(mu1, Sigma1, s1, mu2, Sigma2, s2, jitter=1e-12):
     return qmin <= 0.0
 
 
+def evaluate_classification(ell_mask, mask, P, max_err_frac_eps):
+    """Compute performance of approximating mask with ell_mask.
+
+    Parameters
+    ----------
+    ell_mask: array
+        Boolean classifications
+    mask: array
+        True classifications
+    P: int
+        number of entries in mask (mask.size)
+    max_err_frac_eps: float
+        number to add to P when dividing
+
+    Returns
+    -------
+    float
+        number of false positive and false negatives divided by P+max_err_frac_eps.
+    """
+    tp = np.count_nonzero(ell_mask & mask)
+    fp = np.count_nonzero(ell_mask & (~mask))
+    fn = P - tp
+    return (fp + fn) / (P + max_err_frac_eps)
+
+
 def plot_gmm_corner(
     gmm,
     limits=None,
@@ -307,12 +332,12 @@ def plot_gmm_corner(
     labels=None,
     truths=None,
     truths_kw={"color": "tab:blue", "lw": 1},
-    max_err_frac=0.05,
-    overlap_prevention_factor=1.5,
+    max_err_frac=0.10,
+    max_err_frac_eps=10,
+    overlap_prevention_factor=2.0,
     linewidth=1,
 ):
-    """
-    Analytic corner plot from a Gaussian Mixture model.
+    """Make analytic corner plot from a Gaussian Mixture model.
 
     Parameters
     ----------
@@ -339,6 +364,9 @@ def plot_gmm_corner(
     max_err_frac: float
         Maximum ratio of ellipse misclassifion area to ellipse area,
         to use an ellipse instead of a contour.
+    max_err_frac_eps: float
+        number to add to the total when dividing the number
+        of false positive and false negative classifications .
     overlap_prevention_factor: float
         Expansion factor for ellipses, when checking for overlapping ellipses.
         Should be >= 1.
@@ -354,7 +382,6 @@ def plot_gmm_corner(
     """
     n_dim = gmm.means_.shape[1]
     tickformatter = matplotlib.ticker.NullFormatter()
-    eps = 1e-12
     # min_f1 = 0.8  # performance threshold to accept ellipse approximation
 
     if labels is None:
@@ -494,11 +521,7 @@ def plot_gmm_corner(
                         max_scale = float(D2_members.max())
                         # Scan increasing D^2 threshold; stop when F1 starts decreasing
                         for scale in np.arange(0.25, max_scale + 0.25, 0.25):
-                            ell_mask = D2 <= scale
-                            tp = np.count_nonzero(ell_mask & mask)
-                            fp = np.count_nonzero(ell_mask & (~mask))
-                            fn = P - tp
-                            errfrac_new = (fp + fn) / (P + eps)
+                            errfrac_new = evaluate_classification(D2 <= scale, mask, P, max_err_frac_eps)
 
                             if errfrac_new <= last_performance:
                                 last_performance = errfrac_new
@@ -547,12 +570,7 @@ def plot_gmm_corner(
 
                         # Prospective union and its misclassification error
                         union_new = occupied | ell_mask
-                        tp = np.count_nonzero(union_new & mask)
-                        fp = np.count_nonzero(union_new & (~mask))
-                        fn = (
-                            P - tp
-                        )  # equivalent to np.count_nonzero((~union_new) & mask)
-                        errfrac_new = (fp + fn) / (P + eps)
+                        errfrac_new = evaluate_classification(union_new, mask, P, max_err_frac_eps)
 
                         # Accept only if it improves the union error
                         if errfrac_new < errfrac_curr - 1e-12:
