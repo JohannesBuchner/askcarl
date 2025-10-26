@@ -30,7 +30,6 @@ t0 = time.time()
 plot_gmm_corner_pdf('plotcorner_custom.pdf', gmm, levels=[0.393, 0.675, 0.864], scale=1.0)
 print(f'custom corner pdf: {time.time() - t0:.2f}s')
 
-import sys; sys.exit(0)
 # Corner-style plot with confidence contours
 
 t0 = time.time()
@@ -51,7 +50,7 @@ for i in range(100):
     t0 = time.time()
     fig, axes = plot_gmm_corner(gmm, levels=[0.393, 0.675, 0.864])
     plt.savefig('plotcorner.pdf')
-    print(f'GMM plot 1: {time.time() - t0:.2f}s')
     plt.savefig('plotcorner.pdf')
-    print(f'GMM plot 2: {time.time() - t0:.2f}s')
     plt.close()
+    print(f'GMM plot: {time.time() - t0:.2f}s')
+    break

@@ -597,7 +597,6 @@ def _build_axes_form(
         assert len(ts) > 0, ts
         if (ts[-1] - lo) / (hi - lo) > 0.9:
             ts = ts[:-1]
-        # ts = np.unique(np.round(np.linspace(lo, hi, tick_count + 2)[1:-1], sigfig))
         tickfmts.append(fmt)
         ticks.append(ts)
 
@@ -614,6 +613,7 @@ def _build_axes_form(
             else:
                 c.rect(x0, y0, w, h, stroke=1, fill=0)
                 ts = ticks[i]
+                lo, hi = limits[i]
                 for t, tl in zip(ts, ticklabels[i]):
                     ty = y0 + (t - lo) * (h / (hi - lo))
                     c.line(x0 - 2, ty, x0 + 2, ty)
@@ -624,6 +624,7 @@ def _build_axes_form(
                     c.setFont("Helvetica", labelfontsize)
                     c.drawRightString(x0 - 10 - labelfontsize, y0 + h / 2, labels[i])
             # ticks bottom
+            lo, hi = limits[j]
             ts = ticks[j]
             for t, tl in zip(ts, ticklabels[j]):
                 tx = x0 + (t - lo) * (w / (hi - lo))
