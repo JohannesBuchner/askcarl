@@ -277,6 +277,7 @@ def relocate_empty_clusters_dense(X, distances, sample_weight, centers_sum, weig
 
     assigned_distances = distances[np.arange(N), labels]
     far_from_centers = np.argpartition(assigned_distances, -n_empty)[-n_empty:]
+    centers_sum = np.array(centers_sum)
 
     for idx in range(n_empty):
         new_cluster_id = empty_clusters[idx]
@@ -339,7 +340,7 @@ def kmeans_single_iteration(X, centroid_indices, sample_weight=None, min_cluster
     return labels_final, centers_relocated, cardinality
 
 
-def kmeans_iterate(X, K, sample_weight=None, min_cluster_size=1, rng=np.random, verbose=False, TT=None, invTT=None):
+def kmeans_iterate(X, K, sample_weight=None, min_cluster_size=1, rng=np.random, verbose=False, TT=None, invTT=None, max_tries=10):
     """Iterate K-means.
 
     Parameters
@@ -360,6 +361,8 @@ def kmeans_iterate(X, K, sample_weight=None, min_cluster_size=1, rng=np.random, 
         Whitening transform matrix. If none, no whitening is applied.
     invTT: array
         Inverse whitening transform matrix. If none, no whitening is applied.
+    max_tries: int
+        number of tries for a reconstruction
 
     Returns
     -------
@@ -387,7 +390,7 @@ def kmeans_iterate(X, K, sample_weight=None, min_cluster_size=1, rng=np.random, 
         # apply whitening transform
         mean = X.mean(axis=0, keepdims=True)
         XT = (X - mean) @ TT
-    while True:
+    for i in range(max_tries):
         centroid_indices = rng.choice(N, size=K, replace=False)
         labels, centroids, cardinalities = kmeans_single_iteration(
             XT, centroid_indices, sample_weight=sample_weight_actual, min_cluster_size=min_cluster_size)
@@ -398,7 +401,7 @@ def kmeans_iterate(X, K, sample_weight=None, min_cluster_size=1, rng=np.random, 
                 print('fail, some clusters are too small!', N, D, K, min_cluster_size, cardinalities[order[0]])
             continue
         if invTT is not None:
-            # reverse whitening transform
+            # apply the reverse whitening transform
             centroids = centroids @ invTT + mean
         try:
             for k in order:
@@ -410,14 +413,19 @@ def kmeans_iterate(X, K, sample_weight=None, min_cluster_size=1, rng=np.random, 
             if verbose:
                 print('success!', cardinalities[order[0]])
             return labels, centroids, covariances, precisions_chol, cardinalities / float(N)
-        except np.linalg.LinAlgError:
+        except np.linalg.LinAlgError as e:
             # not a successful construction, try again
-            continue
+            if i < max_tries - 1:
+                continue
+            else:
+                raise e
         except FloatingPointError as e:
             # not a successful construction, try again
-            if verbose:
+            if i < max_tries - 1:
                 print('fail!', e, cardinalities[k])
-            continue
+                continue
+            else:
+                raise e
 
 
 class LightGMM:
