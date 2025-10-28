@@ -13,7 +13,7 @@ Features:
 * supports weighted observations
 * can be converted into a scikit-learn GaussianMixture
 
-The name is an hommage to the much more famous LightGBM library.
+The name is an homage to the much more famous LightGBM library.
 LightGMM makes Gaussian mixture models fast.
 
 Method
