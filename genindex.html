@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Index &mdash; askcarl 2.1.0 documentation</title>
+  <title>Index &mdash; askcarl 2.2.2 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
 
@@ -15,7 +15,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=20623aea"></script>
+        <script src="_static/documentation_options.js?v=219dea72"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
@@ -36,7 +36,7 @@
             askcarl
           </a>
               <div class="version">
-                2.1.0
+                2.2.2
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -54,6 +54,7 @@
 <li class="toctree-l1"><a class="reference internal" href="issues.html">Frequently Asked Questions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules.html">API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="lightgmm.html">LightGMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plot.html">Plots</a></li>
 </ul>
 
         </div>
@@ -93,6 +94,7 @@
  | <a href="#P"><strong>P</strong></a>
  | <a href="#S"><strong>S</strong></a>
  | <a href="#T"><strong>T</strong></a>
+ | <a href="#U"><strong>U</strong></a>
  | <a href="#W"><strong>W</strong></a>
  
 </div>
@@ -130,6 +132,13 @@
 </li>
       </ul></li>
       <li>
+    askcarl.plot
+
+      <ul>
+        <li><a href="askcarl.html#module-askcarl.plot">module</a>
+</li>
+      </ul></li>
+      <li>
     askcarl.utils
 
       <ul>
@@ -142,13 +151,21 @@
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="askcarl.html#askcarl.mixture.GaussianMixture.components">components (askcarl.mixture.GaussianMixture attribute)</a>
+      <li><a href="askcarl.html#askcarl.utils.multivariate_normal0.cdf">cdf() (askcarl.utils.multivariate_normal0 method)</a>
+
+      <ul>
+        <li><a href="askcarl.html#askcarl.utils.univariate_normal.cdf">(askcarl.utils.univariate_normal method)</a>
 </li>
-      <li><a href="askcarl.html#askcarl.gaussian.Gaussian.conditional_logpdf">conditional_logpdf() (askcarl.gaussian.Gaussian method)</a>
+      </ul></li>
+      <li><a href="askcarl.html#askcarl.mixture.GaussianMixture.components">components (askcarl.mixture.GaussianMixture attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="askcarl.html#askcarl.gaussian.Gaussian.conditional_logpdf">conditional_logpdf() (askcarl.gaussian.Gaussian method)</a>
+</li>
       <li><a href="askcarl.html#askcarl.gaussian.Gaussian.conditional_pdf">conditional_pdf() (askcarl.gaussian.Gaussian method)</a>
+</li>
+      <li><a href="askcarl.html#askcarl.plot.confidence_contours">confidence_contours() (in module askcarl.plot)</a>
 </li>
       <li><a href="askcarl.html#askcarl.utils.cov_to_prec_cholesky">cov_to_prec_cholesky() (in module askcarl.utils)</a>
 </li>
@@ -204,14 +221,22 @@
 </li>
       <li><a href="askcarl.html#askcarl.lightgmm.LightGMM">LightGMM (class in askcarl.lightgmm)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="askcarl.html#askcarl.lightgmm.LightGMM2">LightGMM2 (class in askcarl.lightgmm)</a>
 </li>
+      <li><a href="askcarl.html#askcarl.utils.multivariate_normal0.logcdf">logcdf() (askcarl.utils.multivariate_normal0 method)</a>
+
+      <ul>
+        <li><a href="askcarl.html#askcarl.utils.univariate_normal.logcdf">(askcarl.utils.univariate_normal method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="askcarl.html#askcarl.gaussian.Gaussian.logpdf">logpdf() (askcarl.gaussian.Gaussian method)</a>
 
       <ul>
         <li><a href="askcarl.html#askcarl.mixture.GaussianMixture.logpdf">(askcarl.mixture.GaussianMixture method)</a>
+</li>
+        <li><a href="askcarl.html#askcarl.utils.multivariate_normal0.logpdf">(askcarl.utils.multivariate_normal0 method)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -232,11 +257,15 @@
 </li>
         <li><a href="askcarl.html#module-askcarl.mixture">askcarl.mixture</a>
 </li>
+        <li><a href="askcarl.html#module-askcarl.plot">askcarl.plot</a>
+</li>
         <li><a href="askcarl.html#module-askcarl.utils">askcarl.utils</a>
 </li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="askcarl.html#askcarl.utils.multivariate_normal0">multivariate_normal0 (class in askcarl.utils)</a>
+</li>
       <li><a href="askcarl.html#askcarl.utils.mvn_logpdf">mvn_logpdf() (in module askcarl.utils)</a>
 </li>
       <li><a href="askcarl.html#askcarl.utils.mvn_pdf">mvn_pdf() (in module askcarl.utils)</a>
@@ -252,10 +281,16 @@
       <ul>
         <li><a href="askcarl.html#askcarl.mixture.GaussianMixture.pdf">(askcarl.mixture.GaussianMixture method)</a>
 </li>
+        <li><a href="askcarl.html#askcarl.utils.multivariate_normal0.pdf">(askcarl.utils.multivariate_normal0 method)</a>
+</li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="askcarl.html#askcarl.gaussian.pdfcdf">pdfcdf() (in module askcarl.gaussian)</a>
+</li>
+      <li><a href="askcarl.html#askcarl.plot.plot_gmm_corner">plot_gmm_corner() (in module askcarl.plot)</a>
+</li>
+      <li><a href="askcarl.html#askcarl.plot.plot_gmm_corner_pdf">plot_gmm_corner_pdf() (in module askcarl.plot)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -303,6 +338,14 @@
         <li><a href="askcarl.html#askcarl.lightgmm.LightGMM2.to_sklearn">(askcarl.lightgmm.LightGMM2 method)</a>
 </li>
       </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="U">U</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="askcarl.html#askcarl.utils.univariate_normal">univariate_normal (class in askcarl.utils)</a>
+</li>
   </ul></td>
 </tr></table>
 

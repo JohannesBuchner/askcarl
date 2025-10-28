@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>askcarl.plot &mdash; askcarl 2.2.2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+
+  
+    <link rel="canonical" href="https://johannesbuchner.github.io/askcarl/_modules/askcarl/plot.html" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=219dea72"></script>
+        <script src="../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #2980B9" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            askcarl
+          </a>
+              <div class="version">
+                2.2.2
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../readme.html">askcarl</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../issues.html">Frequently Asked Questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../lightgmm.html">LightGMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plot.html">Plots</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #2980B9" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">askcarl</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content style-external-links">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">askcarl.plot</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for askcarl.plot</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Visualisation of GMM as a corner plot.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">matplotlib</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">contourpy</span> <span class="kn">import</span> <span class="n">contour_generator</span>
+<span class="kn">from</span> <span class="nn">matplotlib.colors</span> <span class="kn">import</span> <span class="n">to_rgb</span> <span class="k">as</span> <span class="n">_mpl_to_rgb</span>
+<span class="kn">from</span> <span class="nn">reportlab.lib.colors</span> <span class="kn">import</span> <span class="n">Color</span><span class="p">,</span> <span class="n">black</span><span class="p">,</span> <span class="n">navy</span><span class="p">,</span> <span class="n">purple</span>
+<span class="kn">from</span> <span class="nn">reportlab.pdfgen</span> <span class="kn">import</span> <span class="n">canvas</span>
+
+<span class="n">_TWO_PI</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+
+
+<span class="k">def</span> <span class="nf">_to_rl_color</span><span class="p">(</span><span class="n">color</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert to ReportLab color.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    color: object</span>
+<span class="sd">        ReportLab color or matplotlib-readable rgb tuple.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    color: object</span>
+<span class="sd">        ReportLab color</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Accept reportlab Color, matplotlib string/tuple</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">Color</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">color</span>
+    <span class="n">rgb</span> <span class="o">=</span> <span class="n">_mpl_to_rgb</span><span class="p">(</span><span class="n">color</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">))</span> <span class="k">else</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Color</span><span class="p">(</span><span class="o">*</span><span class="n">rgb</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="confidence_contours">
+<a class="viewcode-back" href="../../askcarl.html#askcarl.plot.confidence_contours">[docs]</a>
+<span class="k">def</span> <span class="nf">confidence_contours</span><span class="p">(</span><span class="n">pdf</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="p">[</span><span class="mf">0.393</span><span class="p">,</span> <span class="mf">0.675</span><span class="p">,</span> <span class="mf">0.864</span><span class="p">]):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute PDF thresholds for given enclosed probability levels.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    pdf: array</span>
+<span class="sd">        probability density function as an array.</span>
+<span class="sd">    levels: list</span>
+<span class="sd">        cumulative probability levels (like corner.py).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    thresholds: array</span>
+<span class="sd">        Threshold values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">flat</span> <span class="o">=</span> <span class="n">pdf</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">flat</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="c1"># high -&gt; low</span>
+    <span class="n">sorted_pdf</span> <span class="o">=</span> <span class="n">flat</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+    <span class="n">cumsum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">sorted_pdf</span><span class="p">)</span>
+    <span class="c1"># normalize to 1</span>
+    <span class="n">cumsum</span> <span class="o">/=</span> <span class="n">cumsum</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">thresholds</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">lev</span> <span class="ow">in</span> <span class="n">levels</span><span class="p">:</span>
+        <span class="c1"># Find minimum pdf value that encloses fraction=lev</span>
+        <span class="n">thresh</span> <span class="o">=</span> <span class="n">sorted_pdf</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">cumsum</span><span class="p">,</span> <span class="n">lev</span><span class="p">)]</span>
+        <span class="n">thresholds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">thresh</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">thresholds</span></div>
+
+
+
+<div class="viewcode-block" id="plot_gmm_corner">
+<a class="viewcode-back" href="../../askcarl.html#askcarl.plot.plot_gmm_corner">[docs]</a>
+<span class="k">def</span> <span class="nf">plot_gmm_corner</span><span class="p">(</span>
+    <span class="n">gmm</span><span class="p">,</span>
+    <span class="n">limits</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">bins</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span>
+    <span class="n">levels</span><span class="o">=</span><span class="p">[</span><span class="mf">0.393</span><span class="p">,</span> <span class="mf">0.675</span><span class="p">,</span> <span class="mf">0.864</span><span class="p">],</span>
+    <span class="n">fig</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">axes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;k&quot;</span><span class="p">,</span>
+    <span class="n">labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">truths</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">truths_kw</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;tab:blue&quot;</span><span class="p">,</span> <span class="s2">&quot;lw&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
+    <span class="n">max_err_frac</span><span class="o">=</span><span class="mf">0.00</span><span class="p">,</span>
+    <span class="n">max_err_frac_eps</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+    <span class="n">overlap_prevention_factor</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
+    <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Make analytic corner plot from a Gaussian Mixture model.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    gmm: object</span>
+<span class="sd">        scikit-learn GaussianMixture</span>
+<span class="sd">    limits: None or list</span>
+<span class="sd">        axes limits</span>
+<span class="sd">    bins: int</span>
+<span class="sd">        number of bins</span>
+<span class="sd">    levels: list</span>
+<span class="sd">        Contour levels enclose given confidence intervals (as in corner.py).</span>
+<span class="sd">    fig: object</span>
+<span class="sd">        if provided, plot into this matplotlib figure, otherwise a new one figure is created.</span>
+<span class="sd">    axes: object</span>
+<span class="sd">        if provided, plot into these matplotlib axes, otherwise a new one figure is created.</span>
+<span class="sd">    color: str</span>
+<span class="sd">        color.</span>
+<span class="sd">    labels: list</span>
+<span class="sd">        name for each parameter.</span>
+<span class="sd">    truths: list</span>
+<span class="sd">        list of true values for each parameter.</span>
+<span class="sd">    truths_kw: dict</span>
+<span class="sd">        arguments passed for styling lines of true parameters.</span>
+<span class="sd">    max_err_frac: float</span>
+<span class="sd">        Maximum ratio of ellipse misclassifion area to ellipse area,</span>
+<span class="sd">        to use an ellipse instead of a contour.</span>
+<span class="sd">    max_err_frac_eps: float</span>
+<span class="sd">        number to add to the total when dividing the number</span>
+<span class="sd">        of false positive and false negative classifications .</span>
+<span class="sd">    overlap_prevention_factor: float</span>
+<span class="sd">        Expansion factor for ellipses, when checking for overlapping ellipses.</span>
+<span class="sd">        Should be &gt;= 1.</span>
+<span class="sd">    linewidth: float</span>
+<span class="sd">        Width of the line.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    fig: object</span>
+<span class="sd">        first return value of matplotlib.subplots</span>
+<span class="sd">    axes: object</span>
+<span class="sd">        second return value of matplotlib.subplots</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n_dim</span> <span class="o">=</span> <span class="n">gmm</span><span class="o">.</span><span class="n">means_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">tickformatter</span> <span class="o">=</span> <span class="n">matplotlib</span><span class="o">.</span><span class="n">ticker</span><span class="o">.</span><span class="n">NullFormatter</span><span class="p">()</span>
+    <span class="c1"># min_f1 = 0.8  # performance threshold to accept ellipse approximation</span>
+
+    <span class="k">if</span> <span class="n">labels</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;x</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_dim</span><span class="p">)]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_dim</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;number of labels (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span><span class="si">}</span><span class="s2">) should be the same as number of dimensions (</span><span class="si">{</span><span class="n">n_dim</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="p">)</span>
+    <span class="k">if</span> <span class="n">truths</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">truths</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_dim</span><span class="p">)]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">truths</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">truths</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">truths</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_dim</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;number of labels (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">truths</span><span class="p">)</span><span class="si">}</span><span class="s2">) should be the same as number of dimensions (</span><span class="si">{</span><span class="n">n_dim</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">limits</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># default limits: mean plus-minus 5 std for each dimension</span>
+        <span class="n">limits</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_dim</span><span class="p">):</span>
+            <span class="n">mean_d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">gmm</span><span class="o">.</span><span class="n">means_</span><span class="p">[:,</span> <span class="n">d</span><span class="p">],</span> <span class="n">weights</span><span class="o">=</span><span class="n">gmm</span><span class="o">.</span><span class="n">weights_</span><span class="p">)</span>
+            <span class="n">var_d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">cov</span><span class="p">[</span><span class="n">d</span><span class="p">,</span> <span class="n">d</span><span class="p">]</span> <span class="k">for</span> <span class="n">cov</span> <span class="ow">in</span> <span class="n">gmm</span><span class="o">.</span><span class="n">covariances_</span><span class="p">],</span> <span class="n">weights</span><span class="o">=</span><span class="n">gmm</span><span class="o">.</span><span class="n">weights_</span>
+            <span class="p">)</span>
+            <span class="n">std_d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var_d</span><span class="p">)</span>
+            <span class="n">limits</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">mean_d</span> <span class="o">-</span> <span class="mi">5</span> <span class="o">*</span> <span class="n">std_d</span><span class="p">,</span> <span class="n">mean_d</span> <span class="o">+</span> <span class="mi">5</span> <span class="o">*</span> <span class="n">std_d</span><span class="p">))</span>
+
+    <span class="n">grids</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">lo</span><span class="p">,</span> <span class="n">hi</span><span class="p">,</span> <span class="n">bins</span><span class="p">)</span> <span class="k">for</span> <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span> <span class="ow">in</span> <span class="n">limits</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">fig</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">axes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span>
+            <span class="n">n_dim</span><span class="p">,</span>
+            <span class="n">n_dim</span><span class="p">,</span>
+            <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mf">2.5</span> <span class="o">*</span> <span class="n">n_dim</span><span class="p">,</span> <span class="mf">2.5</span> <span class="o">*</span> <span class="n">n_dim</span><span class="p">),</span>
+            <span class="n">gridspec_kw</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">hspace</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">wspace</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_dim</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_dim</span><span class="p">):</span>
+            <span class="n">ax</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">j</span> <span class="o">&gt;</span> <span class="n">i</span><span class="p">:</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s2">&quot;off&quot;</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">n_dim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="c1"># bottom row</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="n">labels</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># ax.set_xticklabels([])</span>
+                <span class="c1"># ax.xaxis.set_major_locator(matplotlib.ticker.NullLocator())</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_major_formatter</span><span class="p">(</span><span class="n">tickformatter</span><span class="p">)</span>
+                <span class="k">pass</span>
+            <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># left column (except first row)</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="c1"># ax.yaxis.set_major_locator(ticklocator)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># ax.set_yticklabels([])</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">yaxis</span><span class="o">.</span><span class="n">set_major_formatter</span><span class="p">(</span><span class="n">tickformatter</span><span class="p">)</span>
+                <span class="k">pass</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_major_locator</span><span class="p">(</span><span class="n">matplotlib</span><span class="o">.</span><span class="n">ticker</span><span class="o">.</span><span class="n">MaxNLocator</span><span class="p">(</span><span class="mi">4</span><span class="p">))</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">yaxis</span><span class="o">.</span><span class="n">set_major_locator</span><span class="p">(</span><span class="n">matplotlib</span><span class="o">.</span><span class="n">ticker</span><span class="o">.</span><span class="n">MaxNLocator</span><span class="p">(</span><span class="mi">4</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">j</span><span class="p">:</span>
+                <span class="c1"># 1D marginal</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">grids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">means_1d</span> <span class="o">=</span> <span class="n">gmm</span><span class="o">.</span><span class="n">means_</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span>
+                <span class="n">vars_1d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cov</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">cov</span> <span class="ow">in</span> <span class="n">gmm</span><span class="o">.</span><span class="n">covariances_</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+                <span class="n">pdf</span> <span class="o">=</span> <span class="n">_mixture_pdf_1d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">gmm</span><span class="o">.</span><span class="n">weights_</span><span class="p">,</span> <span class="n">means_1d</span><span class="p">,</span> <span class="n">vars_1d</span><span class="p">)</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">pdf</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">)</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">([])</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="n">limits</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="n">ylo</span><span class="p">,</span> <span class="n">yhi</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_ylim</span><span class="p">()</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">ylo</span><span class="p">,</span> <span class="n">yhi</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">truths</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+                    <span class="n">ax</span><span class="o">.</span><span class="n">vlines</span><span class="p">(</span><span class="n">truths</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ylo</span><span class="p">,</span> <span class="n">yhi</span><span class="p">,</span> <span class="o">**</span><span class="n">truths_kw</span><span class="p">)</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">i</span><span class="p">:</span>
+                <span class="c1"># 2D marginal</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">grids</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+                <span class="n">y</span> <span class="o">=</span> <span class="n">grids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+                <span class="n">means_2d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">gmm</span><span class="o">.</span><span class="n">means_</span><span class="p">[:,</span> <span class="n">j</span><span class="p">],</span> <span class="n">gmm</span><span class="o">.</span><span class="n">means_</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">covs_2d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">cov</span><span class="p">[[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]][:,</span> <span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]]</span> <span class="k">for</span> <span class="n">cov</span> <span class="ow">in</span> <span class="n">gmm</span><span class="o">.</span><span class="n">covariances_</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span>
+                <span class="p">)</span>
+                <span class="n">pdf</span> <span class="o">=</span> <span class="n">_mixture_pdf_2d_grid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">gmm</span><span class="o">.</span><span class="n">weights_</span><span class="p">,</span> <span class="n">means_2d</span><span class="p">,</span> <span class="n">covs_2d</span><span class="p">)</span>
+
+                <span class="c1"># Compute contour thresholds</span>
+                <span class="n">thresholds</span> <span class="o">=</span> <span class="n">confidence_contours</span><span class="p">(</span><span class="n">pdf</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="n">levels</span><span class="p">)</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span>
+                    <span class="n">X</span><span class="p">,</span>
+                    <span class="n">Y</span><span class="p">,</span>
+                    <span class="n">pdf</span><span class="p">,</span>
+                    <span class="n">levels</span><span class="o">=</span><span class="nb">sorted</span><span class="p">(</span><span class="n">thresholds</span><span class="p">),</span>
+                    <span class="n">linewidths</span><span class="o">=</span><span class="p">[</span><span class="n">linewidth</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">thresholds</span><span class="p">),</span>
+                    <span class="n">colors</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="n">limits</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">limits</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">truths</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+                    <span class="n">ax</span><span class="o">.</span><span class="n">vlines</span><span class="p">(</span><span class="n">truths</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="o">*</span><span class="n">limits</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="o">**</span><span class="n">truths_kw</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">truths</span><span class="p">[</span><span class="n">j</span><span class="p">]):</span>
+                    <span class="n">ax</span><span class="o">.</span><span class="n">hlines</span><span class="p">(</span><span class="n">truths</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="o">*</span><span class="n">limits</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="o">**</span><span class="n">truths_kw</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">_mixture_pdf_1d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">means</span><span class="p">,</span> <span class="n">variances</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get marginal posterior from 1d GMM.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x: array</span>
+<span class="sd">        positions</span>
+<span class="sd">    weights: array</span>
+<span class="sd">        GMM weights</span>
+<span class="sd">    means: array</span>
+<span class="sd">        list of mean of each component</span>
+<span class="sd">    variances: list</span>
+<span class="sd">        variance of each component.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pdf: array</span>
+<span class="sd">        probability</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">inv_var</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">variances</span>
+    <span class="n">norm</span> <span class="o">=</span> <span class="n">weights</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">inv_var</span> <span class="o">/</span> <span class="n">_TWO_PI</span><span class="p">)</span>
+    <span class="n">dx</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">means</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">norm</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">dx</span> <span class="o">*</span> <span class="n">dx</span><span class="p">)</span> <span class="o">*</span> <span class="n">inv_var</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_mixture_pdf_2d_grid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">means_2d</span><span class="p">,</span> <span class="n">covs_2d</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get conditional posterior from 2d GMM.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x: array</span>
+<span class="sd">        x positions</span>
+<span class="sd">    y: array</span>
+<span class="sd">        y positions</span>
+<span class="sd">    weights: array</span>
+<span class="sd">        GMM weights</span>
+<span class="sd">    means_2d: array</span>
+<span class="sd">        list of means of each component</span>
+<span class="sd">    covs_2d: list</span>
+<span class="sd">        covariance matrices of components.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pdf: array</span>
+<span class="sd">        probability</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">Ny</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">Nx</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">pdf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">Ny</span><span class="p">,</span> <span class="n">Nx</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">w</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">C</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="n">means_2d</span><span class="p">,</span> <span class="n">covs_2d</span><span class="p">):</span>
+        <span class="n">mu_x</span><span class="p">,</span> <span class="n">mu_y</span> <span class="o">=</span> <span class="n">m</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">m</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">c00</span><span class="p">,</span> <span class="n">c01</span><span class="p">,</span> <span class="n">c11</span> <span class="o">=</span> <span class="n">C</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">C</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">C</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">det</span> <span class="o">=</span> <span class="n">c00</span> <span class="o">*</span> <span class="n">c11</span> <span class="o">-</span> <span class="n">c01</span> <span class="o">*</span> <span class="n">c01</span>
+        <span class="k">if</span> <span class="n">det</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">inv00</span> <span class="o">=</span> <span class="n">c11</span> <span class="o">/</span> <span class="n">det</span>
+        <span class="n">inv01</span> <span class="o">=</span> <span class="o">-</span><span class="n">c01</span> <span class="o">/</span> <span class="n">det</span>
+        <span class="n">inv11</span> <span class="o">=</span> <span class="n">c00</span> <span class="o">/</span> <span class="n">det</span>
+        <span class="n">norm</span> <span class="o">=</span> <span class="n">w</span> <span class="o">/</span> <span class="p">(</span><span class="n">_TWO_PI</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">det</span><span class="p">))</span>
+        <span class="n">dx</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">mu_x</span>  <span class="c1"># (1,Nx)</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="n">y</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">-</span> <span class="n">mu_y</span>  <span class="c1"># (Ny,1)</span>
+        <span class="n">expo</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">inv00</span> <span class="o">*</span> <span class="p">(</span><span class="n">dx</span> <span class="o">*</span> <span class="n">dx</span><span class="p">)</span> <span class="o">+</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">inv01</span> <span class="o">*</span> <span class="p">(</span><span class="n">dx</span> <span class="o">*</span> <span class="n">dy</span><span class="p">)</span> <span class="o">+</span> <span class="n">inv11</span> <span class="o">*</span> <span class="p">(</span><span class="n">dy</span> <span class="o">*</span> <span class="n">dy</span><span class="p">))</span>
+        <span class="n">pdf</span> <span class="o">+=</span> <span class="n">norm</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">expo</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pdf</span>
+
+
+<span class="k">def</span> <span class="nf">_map_xy</span><span class="p">(</span><span class="n">xx</span><span class="p">,</span> <span class="n">yy</span><span class="p">,</span> <span class="n">rect</span><span class="p">,</span> <span class="n">xlim</span><span class="p">,</span> <span class="n">ylim</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Transform linearly.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    xx: float</span>
+<span class="sd">        x value</span>
+<span class="sd">    yy: float</span>
+<span class="sd">        y value</span>
+<span class="sd">    rect: tuple</span>
+<span class="sd">        in pixel units, (x0, y0, w, h), with bottom-left origin (ReportLab)</span>
+<span class="sd">    xlim: tuple</span>
+<span class="sd">        x value range within rectangle</span>
+<span class="sd">    ylim: tuple</span>
+<span class="sd">        y value range within rectangle</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    px: float</span>
+<span class="sd">        positions of xx in pixels</span>
+<span class="sd">    py: float</span>
+<span class="sd">        positions of yy in pixels</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">rect</span>
+    <span class="n">px</span> <span class="o">=</span> <span class="n">x0</span> <span class="o">+</span> <span class="p">(</span><span class="n">xx</span> <span class="o">-</span> <span class="n">xlim</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">w</span> <span class="o">/</span> <span class="p">(</span><span class="n">xlim</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">xlim</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="n">py</span> <span class="o">=</span> <span class="n">y0</span> <span class="o">+</span> <span class="p">(</span><span class="n">yy</span> <span class="o">-</span> <span class="n">ylim</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">h</span> <span class="o">/</span> <span class="p">(</span><span class="n">ylim</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">ylim</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">return</span> <span class="n">px</span><span class="p">,</span> <span class="n">py</span>
+
+
+<span class="k">def</span> <span class="nf">_draw_contours_pdf</span><span class="p">(</span>
+    <span class="n">canvas</span><span class="p">,</span>
+    <span class="n">rect</span><span class="p">,</span>
+    <span class="n">xlim</span><span class="p">,</span>
+    <span class="n">ylim</span><span class="p">,</span>
+    <span class="n">level_segs</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="n">black</span><span class="p">,</span>
+    <span class="n">lw</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">clip</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Draw contour lines.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    canvas: object</span>
+<span class="sd">        ReportLab canvas object</span>
+<span class="sd">    rect: tuple</span>
+<span class="sd">        panel rectangle</span>
+<span class="sd">    xlim: tuple</span>
+<span class="sd">        x axis range</span>
+<span class="sd">    ylim: tuple</span>
+<span class="sd">        y axis range</span>
+<span class="sd">    level_segs: list</span>
+<span class="sd">        plot segments of level</span>
+<span class="sd">    color: str</span>
+<span class="sd">        color.</span>
+<span class="sd">    lw: float</span>
+<span class="sd">        line width</span>
+<span class="sd">    clip: bool</span>
+<span class="sd">        whether to clip the contour at the border</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">rect</span>
+    <span class="n">canvas</span><span class="o">.</span><span class="n">saveState</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">clip</span><span class="p">:</span>
+        <span class="n">pclip</span> <span class="o">=</span> <span class="n">canvas</span><span class="o">.</span><span class="n">beginPath</span><span class="p">()</span>
+        <span class="n">pclip</span><span class="o">.</span><span class="n">rect</span><span class="p">(</span><span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">)</span>
+        <span class="n">canvas</span><span class="o">.</span><span class="n">clipPath</span><span class="p">(</span><span class="n">pclip</span><span class="p">,</span> <span class="n">stroke</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">canvas</span><span class="o">.</span><span class="n">setStrokeColor</span><span class="p">(</span><span class="n">color</span><span class="p">)</span>
+    <span class="n">canvas</span><span class="o">.</span><span class="n">setLineWidth</span><span class="p">(</span><span class="n">lw</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">seg</span> <span class="ow">in</span> <span class="n">level_segs</span><span class="p">:</span>
+        <span class="c1"># Map to pixel coordinates first</span>
+        <span class="n">pts_px</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">seg</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">seg</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="n">pts_px</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">pts_px</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">_map_xy</span><span class="p">(</span><span class="n">seg</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">seg</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">rect</span><span class="p">,</span> <span class="n">xlim</span><span class="p">,</span> <span class="n">ylim</span><span class="p">)</span>
+        <span class="c1"># Draw path</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">canvas</span><span class="o">.</span><span class="n">beginPath</span><span class="p">()</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">moveTo</span><span class="p">(</span><span class="n">pts_px</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">pts_px</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">pts_px</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">lineTo</span><span class="p">(</span><span class="n">pts_px</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">pts_px</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="n">canvas</span><span class="o">.</span><span class="n">drawPath</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">stroke</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">canvas</span><span class="o">.</span><span class="n">restoreState</span><span class="p">()</span>
+
+
+<span class="k">def</span> <span class="nf">_draw_vline_pdf</span><span class="p">(</span><span class="n">canvas</span><span class="p">,</span> <span class="n">rect</span><span class="p">,</span> <span class="n">xlim</span><span class="p">,</span> <span class="n">ylim</span><span class="p">,</span> <span class="n">xval</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">black</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Draw vertical line.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    canvas: object</span>
+<span class="sd">        ReportLab canvas object</span>
+<span class="sd">    rect: tuple</span>
+<span class="sd">        panel rectangle</span>
+<span class="sd">    xlim: tuple</span>
+<span class="sd">        x axis range</span>
+<span class="sd">    ylim: tuple</span>
+<span class="sd">        y axis range</span>
+<span class="sd">    xval: float</span>
+<span class="sd">        value where to draw x value.</span>
+<span class="sd">    color: str</span>
+<span class="sd">        color.</span>
+<span class="sd">    lw: float</span>
+<span class="sd">        line width</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">rect</span>
+    <span class="n">px</span> <span class="o">=</span> <span class="n">x0</span> <span class="o">+</span> <span class="p">(</span><span class="n">xval</span> <span class="o">-</span> <span class="n">xlim</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">w</span> <span class="o">/</span> <span class="p">(</span><span class="n">xlim</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">xlim</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="n">canvas</span><span class="o">.</span><span class="n">saveState</span><span class="p">()</span>
+    <span class="n">canvas</span><span class="o">.</span><span class="n">setStrokeColor</span><span class="p">(</span><span class="n">color</span><span class="p">)</span>
+    <span class="n">canvas</span><span class="o">.</span><span class="n">setLineWidth</span><span class="p">(</span><span class="n">lw</span><span class="p">)</span>
+    <span class="n">canvas</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">px</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">px</span><span class="p">,</span> <span class="n">y0</span> <span class="o">+</span> <span class="n">h</span><span class="p">)</span>
+    <span class="n">canvas</span><span class="o">.</span><span class="n">restoreState</span><span class="p">()</span>
+
+
+<span class="k">def</span> <span class="nf">_draw_hline_pdf</span><span class="p">(</span><span class="n">canvas</span><span class="p">,</span> <span class="n">rect</span><span class="p">,</span> <span class="n">xlim</span><span class="p">,</span> <span class="n">ylim</span><span class="p">,</span> <span class="n">yval</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">black</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Draw horizontal line.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    canvas: object</span>
+<span class="sd">        ReportLab canvas object</span>
+<span class="sd">    rect: tuple</span>
+<span class="sd">        panel rectangle</span>
+<span class="sd">    xlim: tuple</span>
+<span class="sd">        x axis range</span>
+<span class="sd">    ylim: tuple</span>
+<span class="sd">        y axis range</span>
+<span class="sd">    yval: float</span>
+<span class="sd">        value where to draw y line.</span>
+<span class="sd">    color: str</span>
+<span class="sd">        color.</span>
+<span class="sd">    lw: float</span>
+<span class="sd">        line width</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">rect</span>
+    <span class="n">py</span> <span class="o">=</span> <span class="n">y0</span> <span class="o">+</span> <span class="p">(</span><span class="n">yval</span> <span class="o">-</span> <span class="n">ylim</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">h</span> <span class="o">/</span> <span class="p">(</span><span class="n">ylim</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">ylim</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="n">canvas</span><span class="o">.</span><span class="n">saveState</span><span class="p">()</span>
+    <span class="n">canvas</span><span class="o">.</span><span class="n">setStrokeColor</span><span class="p">(</span><span class="n">color</span><span class="p">)</span>
+    <span class="n">canvas</span><span class="o">.</span><span class="n">setLineWidth</span><span class="p">(</span><span class="n">lw</span><span class="p">)</span>
+    <span class="n">canvas</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">x0</span><span class="p">,</span> <span class="n">py</span><span class="p">,</span> <span class="n">x0</span> <span class="o">+</span> <span class="n">w</span><span class="p">,</span> <span class="n">py</span><span class="p">)</span>
+    <span class="n">canvas</span><span class="o">.</span><span class="n">restoreState</span><span class="p">()</span>
+
+
+<span class="k">def</span> <span class="nf">_compute_rects</span><span class="p">(</span><span class="n">ndim</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">margin</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute rectangles for each panel.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ndim: int</span>
+<span class="sd">        number of axes</span>
+<span class="sd">    width: int</span>
+<span class="sd">        width in pixels</span>
+<span class="sd">    height: int</span>
+<span class="sd">        height in pixels</span>
+<span class="sd">    margin: int</span>
+<span class="sd">        margin</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    rects: list</span>
+<span class="sd">        list of lists, containing (x, y, width, height) of each panel.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">plotW</span> <span class="o">=</span> <span class="n">width</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">margin</span>
+    <span class="n">plotH</span> <span class="o">=</span> <span class="n">height</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">margin</span>
+    <span class="n">cellW</span> <span class="o">=</span> <span class="n">plotW</span> <span class="o">/</span> <span class="n">ndim</span>
+    <span class="n">cellH</span> <span class="o">=</span> <span class="n">plotH</span> <span class="o">/</span> <span class="n">ndim</span>
+    <span class="n">rects</span> <span class="o">=</span> <span class="p">[[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">ndim</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ndim</span><span class="p">)]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ndim</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ndim</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">j</span> <span class="o">&gt;</span> <span class="n">i</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">x0</span> <span class="o">=</span> <span class="n">margin</span> <span class="o">+</span> <span class="n">j</span> <span class="o">*</span> <span class="n">cellW</span>
+            <span class="n">y0</span> <span class="o">=</span> <span class="n">height</span> <span class="o">-</span> <span class="n">margin</span> <span class="o">-</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">cellH</span>  <span class="c1"># bottom-left origin</span>
+            <span class="n">rects</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">cellW</span><span class="p">,</span> <span class="n">cellH</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">rects</span>
+
+
+<span class="k">def</span> <span class="nf">_build_axes_form</span><span class="p">(</span>
+    <span class="n">canvas</span><span class="p">,</span> <span class="n">rects</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">limits</span><span class="p">,</span> <span class="n">tick_count</span><span class="p">,</span> <span class="n">tickfontsize</span><span class="p">,</span> <span class="n">labelfontsize</span><span class="p">,</span> <span class="n">fontname</span><span class="o">=</span><span class="s2">&quot;Helvetica&quot;</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Set up panels.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    canvas: object</span>
+<span class="sd">        ReportLab canvas object</span>
+<span class="sd">    rects: list</span>
+<span class="sd">        list of list giving position of each panel</span>
+<span class="sd">    labels: list</span>
+<span class="sd">        name for each parameter.</span>
+<span class="sd">    limits: None or list</span>
+<span class="sd">        axes limits</span>
+<span class="sd">    tick_count: int</span>
+<span class="sd">        maximum number of ticks to draw</span>
+<span class="sd">    tickfontsize: float</span>
+<span class="sd">        font size for tick labels</span>
+<span class="sd">    labelfontsize: float</span>
+<span class="sd">        font size for axis labels.</span>
+<span class="sd">    fontname: str</span>
+<span class="sd">        font name</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ndim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">rects</span><span class="p">)</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">canvas</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">beginForm</span><span class="p">(</span><span class="s2">&quot;axes&quot;</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">setStrokeColor</span><span class="p">(</span><span class="n">black</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">setLineWidth</span><span class="p">(</span><span class="mf">0.6</span><span class="p">)</span>
+    <span class="n">ticks</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">ticklabels</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">tickfmts</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ndim</span><span class="p">):</span>
+        <span class="n">hi</span> <span class="o">=</span> <span class="n">limits</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">lo</span> <span class="o">=</span> <span class="n">limits</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">sigfig</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">hi</span> <span class="o">-</span> <span class="n">lo</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">sigfig</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">fmt</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%.1e</span><span class="s2">&quot;</span>
+        <span class="k">elif</span> <span class="n">sigfig</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">fmt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;%.</span><span class="si">{</span><span class="n">sigfig</span><span class="si">}</span><span class="s2">f&quot;</span>
+        <span class="k">elif</span> <span class="n">sigfig</span> <span class="o">&gt;</span> <span class="o">-</span><span class="mi">3</span><span class="p">:</span>
+            <span class="n">fmt</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%d</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fmt</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%.1e</span><span class="s2">&quot;</span>
+
+        <span class="n">tsm1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">lo</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">sigfig</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">hi</span><span class="p">,</span> <span class="mi">10</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="n">sigfig</span><span class="p">))</span>
+        <span class="n">ts0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">lo</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">sigfig</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">hi</span><span class="p">,</span> <span class="mi">10</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="n">sigfig</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">tsp1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">lo</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">sigfig</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">hi</span><span class="p">,</span> <span class="mi">10</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="n">sigfig</span> <span class="o">+</span> <span class="mi">2</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">tsp1</span> <span class="o">&gt;</span> <span class="n">lo</span><span class="p">,</span> <span class="n">tsp1</span> <span class="o">&lt;</span> <span class="n">hi</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">ts</span> <span class="o">=</span> <span class="n">tsp1</span>
+        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">ts0</span> <span class="o">&gt;</span> <span class="n">lo</span><span class="p">,</span> <span class="n">ts0</span> <span class="o">&lt;</span> <span class="n">hi</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">ts</span> <span class="o">=</span> <span class="n">ts0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ts</span> <span class="o">=</span> <span class="n">tsm1</span>
+        <span class="n">ticklabels</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">fmt</span> <span class="o">%</span> <span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">ts</span><span class="p">])</span>
+        <span class="n">strlen</span> <span class="o">=</span> <span class="nb">max</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">tl</span><span class="p">)</span> <span class="k">for</span> <span class="n">tl</span> <span class="ow">in</span> <span class="n">ticklabels</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">ts</span> <span class="o">&gt;</span> <span class="n">lo</span><span class="p">,</span> <span class="n">ts</span> <span class="o">&lt;</span> <span class="n">hi</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">&gt;</span> <span class="n">tick_count</span><span class="p">:</span>
+            <span class="n">ts</span> <span class="o">=</span> <span class="n">ts</span><span class="p">[::</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">strlen</span> <span class="o">&gt;</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">ts</span> <span class="o">&gt;</span> <span class="n">lo</span><span class="p">,</span> <span class="n">ts</span> <span class="o">&lt;</span> <span class="n">hi</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">&gt;</span> <span class="n">tick_count</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">ts</span> <span class="o">=</span> <span class="n">ts</span><span class="p">[::</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">ts</span> <span class="o">=</span> <span class="n">ts</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">ts</span> <span class="o">&gt;=</span> <span class="n">lo</span><span class="p">,</span> <span class="n">ts</span> <span class="o">&lt;=</span> <span class="n">hi</span><span class="p">)]</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="n">ts</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">ts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">lo</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">hi</span> <span class="o">-</span> <span class="n">lo</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.9</span><span class="p">:</span>
+            <span class="n">ts</span> <span class="o">=</span> <span class="n">ts</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">tickfmts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fmt</span><span class="p">)</span>
+        <span class="n">ticks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ts</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ndim</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ndim</span><span class="p">):</span>
+            <span class="n">rect</span> <span class="o">=</span> <span class="n">rects</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">rect</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">rect</span>
+            <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="n">i</span><span class="p">:</span>
+                <span class="n">c</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="n">fontname</span><span class="p">,</span> <span class="n">labelfontsize</span><span class="p">)</span>
+                <span class="n">c</span><span class="o">.</span><span class="n">drawCentredString</span><span class="p">(</span><span class="n">x0</span> <span class="o">+</span> <span class="n">w</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">y0</span> <span class="o">+</span> <span class="n">h</span><span class="p">,</span> <span class="n">labels</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+                <span class="n">c</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">x0</span> <span class="o">+</span> <span class="n">w</span><span class="p">,</span> <span class="n">y0</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">c</span><span class="o">.</span><span class="n">rect</span><span class="p">(</span><span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">stroke</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">ts</span> <span class="o">=</span> <span class="n">ticks</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span> <span class="o">=</span> <span class="n">limits</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">tl</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">ts</span><span class="p">,</span> <span class="n">ticklabels</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+                    <span class="n">ty</span> <span class="o">=</span> <span class="n">y0</span> <span class="o">+</span> <span class="p">(</span><span class="n">t</span> <span class="o">-</span> <span class="n">lo</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">h</span> <span class="o">/</span> <span class="p">(</span><span class="n">hi</span> <span class="o">-</span> <span class="n">lo</span><span class="p">))</span>
+                    <span class="n">c</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">x0</span> <span class="o">-</span> <span class="mi">2</span><span class="p">,</span> <span class="n">ty</span><span class="p">,</span> <span class="n">x0</span> <span class="o">+</span> <span class="mi">2</span><span class="p">,</span> <span class="n">ty</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">c</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="n">fontname</span><span class="p">,</span> <span class="n">tickfontsize</span><span class="p">)</span>
+                        <span class="n">c</span><span class="o">.</span><span class="n">drawRightString</span><span class="p">(</span><span class="n">x0</span> <span class="o">-</span> <span class="mi">4</span><span class="p">,</span> <span class="n">ty</span> <span class="o">-</span> <span class="mi">2</span><span class="p">,</span> <span class="n">tl</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">c</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="n">fontname</span><span class="p">,</span> <span class="n">labelfontsize</span><span class="p">)</span>
+                    <span class="n">c</span><span class="o">.</span><span class="n">drawRightString</span><span class="p">(</span><span class="n">x0</span> <span class="o">-</span> <span class="mi">10</span> <span class="o">-</span> <span class="n">labelfontsize</span><span class="p">,</span> <span class="n">y0</span> <span class="o">+</span> <span class="n">h</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="c1"># ticks bottom</span>
+            <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span> <span class="o">=</span> <span class="n">limits</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+            <span class="n">ts</span> <span class="o">=</span> <span class="n">ticks</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">tl</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">ts</span><span class="p">,</span> <span class="n">ticklabels</span><span class="p">[</span><span class="n">j</span><span class="p">]):</span>
+                <span class="n">tx</span> <span class="o">=</span> <span class="n">x0</span> <span class="o">+</span> <span class="p">(</span><span class="n">t</span> <span class="o">-</span> <span class="n">lo</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">w</span> <span class="o">/</span> <span class="p">(</span><span class="n">hi</span> <span class="o">-</span> <span class="n">lo</span><span class="p">))</span>
+                <span class="n">c</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">tx</span><span class="p">,</span> <span class="n">y0</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">ndim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">c</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="n">fontname</span><span class="p">,</span> <span class="n">tickfontsize</span><span class="p">)</span>
+                    <span class="n">c</span><span class="o">.</span><span class="n">drawCentredString</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">y0</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">tickfontsize</span><span class="p">,</span> <span class="n">tl</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">ndim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">c</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="n">fontname</span><span class="p">,</span> <span class="n">labelfontsize</span><span class="p">)</span>
+                <span class="n">c</span><span class="o">.</span><span class="n">drawCentredString</span><span class="p">(</span><span class="n">x0</span> <span class="o">+</span> <span class="n">w</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">y0</span> <span class="o">-</span> <span class="mi">10</span> <span class="o">-</span> <span class="n">labelfontsize</span><span class="p">,</span> <span class="n">labels</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+            <span class="c1"># ticks left</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">endForm</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="plot_gmm_corner_pdf">
+<a class="viewcode-back" href="../../askcarl.html#askcarl.plot.plot_gmm_corner_pdf">[docs]</a>
+<span class="k">def</span> <span class="nf">plot_gmm_corner_pdf</span><span class="p">(</span>
+    <span class="n">outputfile</span><span class="p">,</span>
+    <span class="n">gmm</span><span class="p">,</span>
+    <span class="n">bins</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span>
+    <span class="n">limits</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">levels</span><span class="o">=</span><span class="p">[</span><span class="mf">0.393</span><span class="p">,</span> <span class="mf">0.675</span><span class="p">,</span> <span class="mf">0.864</span><span class="p">],</span>
+    <span class="n">color</span><span class="o">=</span><span class="n">navy</span><span class="p">,</span>
+    <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">width</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span>
+    <span class="n">height</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span>
+    <span class="n">margin</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span>
+    <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">truths</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">truthcolor</span><span class="o">=</span><span class="n">purple</span><span class="p">,</span>
+    <span class="n">truthlinewidth</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">tick_count</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">fontname</span><span class="o">=</span><span class="s2">&quot;Helvetica&quot;</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Make analytic corner plot from a Gaussian Mixture model.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    outputfile: str</span>
+<span class="sd">        output file name</span>
+<span class="sd">    gmm: object</span>
+<span class="sd">        scikit-learn GaussianMixture</span>
+<span class="sd">    bins: int</span>
+<span class="sd">        number of bins</span>
+<span class="sd">    limits: None or list</span>
+<span class="sd">        axes limits</span>
+<span class="sd">    levels: list</span>
+<span class="sd">        Contour levels enclose given confidence intervals (as in corner.py).</span>
+<span class="sd">    color: reportlab.lib.colors.Color or (r,g,b)</span>
+<span class="sd">        Stroke color for lines/contours.</span>
+<span class="sd">    scale: float</span>
+<span class="sd">        scale factor for labels</span>
+<span class="sd">    width: int</span>
+<span class="sd">        plot width</span>
+<span class="sd">    height: int</span>
+<span class="sd">        plot height</span>
+<span class="sd">    margin: int</span>
+<span class="sd">        margin around plot</span>
+<span class="sd">    linewidth: float</span>
+<span class="sd">        Line width in PDF units.</span>
+<span class="sd">    labels: list</span>
+<span class="sd">        name for each parameter.</span>
+<span class="sd">    truths: list</span>
+<span class="sd">        list of true values for each parameter.</span>
+<span class="sd">    truthcolor: reportlab.lib.colors.Color or (r,g,b)</span>
+<span class="sd">        Stroke color for lines indicating true value.</span>
+<span class="sd">    truthlinewidth: float</span>
+<span class="sd">        Line width in PDF units.</span>
+<span class="sd">    tick_count: int</span>
+<span class="sd">        maximum number of ticks.</span>
+<span class="sd">    fontname: str</span>
+<span class="sd">        font name</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n_dim</span> <span class="o">=</span> <span class="n">gmm</span><span class="o">.</span><span class="n">means_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">labels</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;x</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_dim</span><span class="p">)]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_dim</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;number of labels (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span><span class="si">}</span><span class="s2">) should be the same as number of dimensions (</span><span class="si">{</span><span class="n">n_dim</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="p">)</span>
+    <span class="k">if</span> <span class="n">truths</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">truths</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_dim</span><span class="p">)]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">truths</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">truths</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">truths</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_dim</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;number of labels (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">truths</span><span class="p">)</span><span class="si">}</span><span class="s2">) should be the same as number of dimensions (</span><span class="si">{</span><span class="n">n_dim</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="p">)</span>
+
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">gmm</span><span class="o">.</span><span class="n">weights_</span>
+    <span class="n">means</span> <span class="o">=</span> <span class="n">gmm</span><span class="o">.</span><span class="n">means_</span>
+    <span class="n">covs</span> <span class="o">=</span> <span class="n">gmm</span><span class="o">.</span><span class="n">covariances_</span>
+
+    <span class="k">if</span> <span class="n">limits</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># default limits: mean plus-minus 5 std for each dimension</span>
+        <span class="n">limits</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_dim</span><span class="p">):</span>
+            <span class="n">lo</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">mean</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">-</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">cov</span><span class="p">[</span><span class="n">d</span><span class="p">,</span> <span class="n">d</span><span class="p">]</span> <span class="o">**</span> <span class="mf">0.5</span> <span class="k">for</span> <span class="n">mean</span><span class="p">,</span> <span class="n">cov</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">means</span><span class="p">,</span> <span class="n">covs</span><span class="p">))</span>
+            <span class="n">hi</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">mean</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">+</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">cov</span><span class="p">[</span><span class="n">d</span><span class="p">,</span> <span class="n">d</span><span class="p">]</span> <span class="o">**</span> <span class="mf">0.5</span> <span class="k">for</span> <span class="n">mean</span><span class="p">,</span> <span class="n">cov</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">means</span><span class="p">,</span> <span class="n">covs</span><span class="p">))</span>
+            <span class="n">limits</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">lo</span><span class="p">,</span> <span class="n">hi</span><span class="p">))</span>
+
+    <span class="n">grids</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">lo</span><span class="p">,</span> <span class="n">hi</span><span class="p">,</span> <span class="n">bins</span><span class="p">)</span> <span class="k">for</span> <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span> <span class="ow">in</span> <span class="n">limits</span><span class="p">]</span>
+
+    <span class="c1"># pdf = CornerPDFTemplate(n_dim, limits, labels, outpath=outputfile, scale=scale, width=width, height=height)</span>
+    <span class="n">pdf_c</span> <span class="o">=</span> <span class="n">canvas</span><span class="o">.</span><span class="n">Canvas</span><span class="p">(</span><span class="n">outputfile</span><span class="p">,</span> <span class="n">pagesize</span><span class="o">=</span><span class="p">(</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">))</span>
+    <span class="n">tickfontsize</span> <span class="o">=</span> <span class="mi">6</span> <span class="o">*</span> <span class="n">scale</span>
+    <span class="n">labelfontsize</span> <span class="o">=</span> <span class="mi">8</span> <span class="o">*</span> <span class="n">scale</span>
+    <span class="n">rects</span> <span class="o">=</span> <span class="n">_compute_rects</span><span class="p">(</span><span class="n">n_dim</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">margin</span><span class="p">)</span>
+    <span class="n">_build_axes_form</span><span class="p">(</span>
+        <span class="n">pdf_c</span><span class="p">,</span> <span class="n">rects</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">limits</span><span class="p">,</span> <span class="n">tick_count</span><span class="p">,</span> <span class="n">tickfontsize</span><span class="p">,</span> <span class="n">labelfontsize</span><span class="p">,</span> <span class="n">fontname</span><span class="o">=</span><span class="n">fontname</span>
+    <span class="p">)</span>
+
+    <span class="n">color</span> <span class="o">=</span> <span class="n">_to_rl_color</span><span class="p">(</span><span class="n">color</span><span class="p">)</span>
+    <span class="n">truthcolor</span> <span class="o">=</span> <span class="n">_to_rl_color</span><span class="p">(</span><span class="n">truthcolor</span><span class="p">)</span>
+
+    <span class="c1"># Start a new page and stamp axes</span>
+    <span class="n">pdf_c</span><span class="o">.</span><span class="n">doForm</span><span class="p">(</span><span class="s2">&quot;axes&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Diagonal 1D panels</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_dim</span><span class="p">):</span>
+        <span class="n">rect</span> <span class="o">=</span> <span class="n">rects</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">grids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">means_1d</span> <span class="o">=</span> <span class="n">means</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span>
+        <span class="n">vars_1d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cov</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">cov</span> <span class="ow">in</span> <span class="n">covs</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">pdf1d</span> <span class="o">=</span> <span class="n">_mixture_pdf_1d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">means_1d</span><span class="p">,</span> <span class="n">vars_1d</span><span class="p">)</span>
+
+        <span class="c1"># Draw polyline for 1D pdf</span>
+        <span class="c1"># Map points into panel rect with y scaled to [0, 1.05*max(pdf)]</span>
+        <span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">rect</span>
+        <span class="n">ymax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">pdf1d</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="mf">1e-12</span><span class="p">))</span>
+        <span class="c1"># Build and draw path</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">pdf_c</span><span class="o">.</span><span class="n">beginPath</span><span class="p">()</span>
+        <span class="n">px</span><span class="p">,</span> <span class="n">py</span> <span class="o">=</span> <span class="n">_map_xy</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">pdf1d</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">rect</span><span class="p">,</span> <span class="n">limits</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.05</span> <span class="o">*</span> <span class="n">ymax</span><span class="p">))</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">moveTo</span><span class="p">(</span><span class="n">px</span><span class="p">,</span> <span class="n">py</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">):</span>
+            <span class="n">px</span><span class="p">,</span> <span class="n">py</span> <span class="o">=</span> <span class="n">_map_xy</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">pdf1d</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">rect</span><span class="p">,</span> <span class="n">limits</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.05</span> <span class="o">*</span> <span class="n">ymax</span><span class="p">))</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">lineTo</span><span class="p">(</span><span class="n">px</span><span class="p">,</span> <span class="n">py</span><span class="p">)</span>
+        <span class="n">pdf_c</span><span class="o">.</span><span class="n">setStrokeColor</span><span class="p">(</span><span class="n">color</span><span class="p">)</span>
+        <span class="n">pdf_c</span><span class="o">.</span><span class="n">setLineWidth</span><span class="p">(</span><span class="n">linewidth</span><span class="p">)</span>
+        <span class="n">pdf_c</span><span class="o">.</span><span class="n">drawPath</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">stroke</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Truth vertical line on diagonal</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">truths</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+            <span class="n">_draw_vline_pdf</span><span class="p">(</span>
+                <span class="n">pdf_c</span><span class="p">,</span> <span class="n">rect</span><span class="p">,</span> <span class="n">limits</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="n">truths</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="n">truthcolor</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="n">truthlinewidth</span>
+            <span class="p">)</span>
+
+    <span class="c1"># Lower-triangular 2D panels</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_dim</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+            <span class="n">rect</span> <span class="o">=</span> <span class="n">rects</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">grids</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">grids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">means_2d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">means</span><span class="p">[:,</span> <span class="n">j</span><span class="p">],</span> <span class="n">means</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">covs_2d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cov</span><span class="p">[[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]][:,</span> <span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]]</span> <span class="k">for</span> <span class="n">cov</span> <span class="ow">in</span> <span class="n">covs</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="n">pdf2d</span> <span class="o">=</span> <span class="n">_mixture_pdf_2d_grid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">means_2d</span><span class="p">,</span> <span class="n">covs_2d</span><span class="p">)</span>
+
+            <span class="c1"># Compute thresholds for enclosed probability</span>
+            <span class="n">thresholds</span> <span class="o">=</span> <span class="n">confidence_contours</span><span class="p">(</span><span class="n">pdf2d</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="n">levels</span><span class="p">)</span>
+
+            <span class="c1"># Generate contour segments directly (no Matplotlib artists)</span>
+            <span class="n">qcg</span> <span class="o">=</span> <span class="n">contour_generator</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="n">pdf2d</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;serial&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">thresholds</span><span class="p">):</span>
+                <span class="n">level_segs</span> <span class="o">=</span> <span class="n">qcg</span><span class="o">.</span><span class="n">lines</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>  <span class="c1"># list of (N,2) arrays</span>
+                <span class="c1"># Draw into panel rect, optionally simplifying</span>
+                <span class="n">_draw_contours_pdf</span><span class="p">(</span>
+                    <span class="n">pdf_c</span><span class="p">,</span>
+                    <span class="n">rect</span><span class="p">,</span>
+                    <span class="n">xlim</span><span class="o">=</span><span class="n">limits</span><span class="p">[</span><span class="n">j</span><span class="p">],</span>
+                    <span class="n">ylim</span><span class="o">=</span><span class="n">limits</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                    <span class="n">level_segs</span><span class="o">=</span><span class="n">level_segs</span><span class="p">,</span>
+                    <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
+                    <span class="n">lw</span><span class="o">=</span><span class="n">linewidth</span><span class="p">,</span>
+                    <span class="n">clip</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="c1"># Truth lines on 2D panels</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">truths</span><span class="p">[</span><span class="n">j</span><span class="p">]):</span>
+                <span class="n">_draw_vline_pdf</span><span class="p">(</span>
+                    <span class="n">pdf_c</span><span class="p">,</span>
+                    <span class="n">rect</span><span class="p">,</span>
+                    <span class="n">limits</span><span class="p">[</span><span class="n">j</span><span class="p">],</span>
+                    <span class="n">limits</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                    <span class="n">truths</span><span class="p">[</span><span class="n">j</span><span class="p">],</span>
+                    <span class="n">color</span><span class="o">=</span><span class="n">truthcolor</span><span class="p">,</span>
+                    <span class="n">lw</span><span class="o">=</span><span class="n">truthlinewidth</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">truths</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+                <span class="n">_draw_hline_pdf</span><span class="p">(</span>
+                    <span class="n">pdf_c</span><span class="p">,</span>
+                    <span class="n">rect</span><span class="p">,</span>
+                    <span class="n">limits</span><span class="p">[</span><span class="n">j</span><span class="p">],</span>
+                    <span class="n">limits</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                    <span class="n">truths</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                    <span class="n">color</span><span class="o">=</span><span class="n">truthcolor</span><span class="p">,</span>
+                    <span class="n">lw</span><span class="o">=</span><span class="n">truthlinewidth</span><span class="p">,</span>
+                <span class="p">)</span>
+
+    <span class="c1"># Finish the page</span>
+    <span class="n">pdf_c</span><span class="o">.</span><span class="n">showPage</span><span class="p">()</span>
+    <span class="n">pdf_c</span><span class="o">.</span><span class="n">save</span><span class="p">()</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2014-2024, Johannes Buchner.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>askcarl package &mdash; askcarl 2.1.0 documentation</title>
+  <title>askcarl package &mdash; askcarl 2.2.2 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
 
@@ -16,7 +16,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=20623aea"></script>
+        <script src="_static/documentation_options.js?v=219dea72"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
@@ -39,7 +39,7 @@
             askcarl
           </a>
               <div class="version">
-                2.1.0
+                2.2.2
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -73,11 +73,19 @@
 <li class="toctree-l4"><a class="reference internal" href="#askcarl.mixture.GaussianMixture"><code class="docutils literal notranslate"><span class="pre">GaussianMixture</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#module-askcarl.plot">askcarl.plot module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#askcarl.plot.confidence_contours"><code class="docutils literal notranslate"><span class="pre">confidence_contours()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#askcarl.plot.plot_gmm_corner"><code class="docutils literal notranslate"><span class="pre">plot_gmm_corner()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#askcarl.plot.plot_gmm_corner_pdf"><code class="docutils literal notranslate"><span class="pre">plot_gmm_corner_pdf()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="#module-askcarl.utils">askcarl.utils module</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#askcarl.utils.mvn_logpdf"><code class="docutils literal notranslate"><span class="pre">mvn_logpdf()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#askcarl.utils.mvn_pdf"><code class="docutils literal notranslate"><span class="pre">mvn_pdf()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#askcarl.utils.is_positive_definite"><code class="docutils literal notranslate"><span class="pre">is_positive_definite()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#askcarl.utils.cov_to_prec_cholesky"><code class="docutils literal notranslate"><span class="pre">cov_to_prec_cholesky()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#askcarl.utils.univariate_normal"><code class="docutils literal notranslate"><span class="pre">univariate_normal</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#askcarl.utils.multivariate_normal0"><code class="docutils literal notranslate"><span class="pre">multivariate_normal0</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#module-askcarl">Module contents</a></li>
@@ -86,6 +94,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="lightgmm.html">LightGMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plot.html">Plots</a></li>
 </ul>
 
         </div>
@@ -153,13 +162,14 @@ is a value (True) or a upper bound (False).</p></li>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>mean</strong> (<em>array</em>) – mean vector of the multivariate normal distribution.</p></li>
 <li><p><strong>cov</strong> (<em>array</em>) – covariance matrix of the multivariate normal distribution.</p></li>
-<li><p><strong>precision_cholesky</strong> (<em>array</em>) – Cholesky factors of the precision matrix.</p></li>
+<li><p><strong>precision_cholesky</strong> (<em>array</em>) – Cholesky factors of the precision matrix, computed with:
+<cite>solve_triangular(cholesky(cov, lower=True), eyes[D], lower=True)</cite></p></li>
 </ul>
 </dd>
 </dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="askcarl.gaussian.Gaussian.get_conditional_rv">
-<span class="sig-name descname"><span class="pre">get_conditional_rv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mask</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/gaussian.html#Gaussian.get_conditional_rv"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.gaussian.Gaussian.get_conditional_rv" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">get_conditional_rv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mask</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/gaussian.html#Gaussian.get_conditional_rv"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.gaussian.Gaussian.get_conditional_rv" title="Link to this definition"></a></dt>
 <dd><p>Build conditional distribution.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -181,7 +191,7 @@ conditioned with <cite>mask</cite>.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="askcarl.gaussian.Gaussian.conditional_pdf">
-<span class="sig-name descname"><span class="pre">conditional_pdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Ellipsis</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/gaussian.html#Gaussian.conditional_pdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.gaussian.Gaussian.conditional_pdf" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">conditional_pdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Ellipsis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/gaussian.html#Gaussian.conditional_pdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.gaussian.Gaussian.conditional_pdf" title="Link to this definition"></a></dt>
 <dd><p>Compute conditional PDF.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -202,7 +212,7 @@ is a value (True) or a upper bound (False).</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="askcarl.gaussian.Gaussian.conditional_logpdf">
-<span class="sig-name descname"><span class="pre">conditional_logpdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Ellipsis</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/gaussian.html#Gaussian.conditional_logpdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.gaussian.Gaussian.conditional_logpdf" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">conditional_logpdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Ellipsis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/gaussian.html#Gaussian.conditional_logpdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.gaussian.Gaussian.conditional_logpdf" title="Link to this definition"></a></dt>
 <dd><p>Compute conditional log-PDF.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -210,6 +220,7 @@ is a value (True) or a upper bound (False).</p></li>
 <li><p><strong>x</strong> (<em>array</em>) – The points (vector) at which to evaluate the probability.</p></li>
 <li><p><strong>mask</strong> (<em>array</em>) – A boolean mask of the same shape as <cite>x.shape[1]</cite>, indicating whether the entry
 is a value (True) or a upper bound (False).</p></li>
+<li><p><strong>key</strong> (<em>int</em>) – key for hashing</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -271,7 +282,7 @@ is a value (True) or a upper bound (False).</p></li>
 <p>A extremely fast-to-train GMM.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="askcarl.lightgmm.LightGMM">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">askcarl.lightgmm.</span></span><span class="sig-name descname"><span class="pre">LightGMM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_components</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">refine_weights</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{'init':</span> <span class="pre">'random',</span> <span class="pre">'max_iter':</span> <span class="pre">1,</span> <span class="pre">'n_init':</span> <span class="pre">1}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warm_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">covariance_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'full'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/lightgmm.html#LightGMM"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.lightgmm.LightGMM" title="Link to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">askcarl.lightgmm.</span></span><span class="sig-name descname"><span class="pre">LightGMM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_components</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">refine_weights</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{'init':</span> <span class="pre">'random',</span> <span class="pre">'max_iter':</span> <span class="pre">1,</span> <span class="pre">'n_init':</span> <span class="pre">1}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warm_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">covariance_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'full'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">TT</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">invTT</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/lightgmm.html#LightGMM"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.lightgmm.LightGMM" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Wrapper which transforms KMeans results into a GMM.</p>
 <p>Initialise.</p>
@@ -283,6 +294,8 @@ is a value (True) or a upper bound (False).</p></li>
 <li><p><strong>init_kwargs</strong> (<em>dict</em>) – arguments passed to KMeans</p></li>
 <li><p><strong>warm_start</strong> (<em>bool</em>) – not supported, has to be False</p></li>
 <li><p><strong>covariance_type</strong> (<em>str</em>) – only “full” is supported</p></li>
+<li><p><strong>TT</strong> (<em>array</em>) – Whitening transform matrix to apply when initialising centroids. If none, no whitening is applied.</p></li>
+<li><p><strong>invTT</strong> (<em>array</em>) – Inverse transform of TT.</p></li>
 </ul>
 </dd>
 </dl>
@@ -385,7 +398,6 @@ are optimized with the other half. This should avoid overfitting
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>n_components</strong> (<em>int</em>) – number of Gaussian components.</p></li>
-<li><p><strong>refine_weights</strong> (<em>bool</em>) – whether to include a E step at the end.</p></li>
 <li><p><strong>init_kwargs</strong> (<em>dict</em>) – arguments passed to KMeans</p></li>
 <li><p><strong>warm_start</strong> (<em>bool</em>) – not supported, has to be False</p></li>
 <li><p><strong>covariance_type</strong> (<em>str</em>) – only “full” is supported</p></li>
@@ -595,6 +607,8 @@ are optimized with the other half. This should avoid overfitting
 <li><p><strong>weights</strong> (<em>list</em>) – weight for each Gaussian component</p></li>
 <li><p><strong>means</strong> (<em>list</em>) – mean vector for each Gaussian component.</p></li>
 <li><p><strong>covs</strong> (<em>list</em>) – covariance matrix for each Gaussian component.</p></li>
+<li><p><strong>precisions_cholesky</strong> (<em>list</em>) – Cholesky factors of each precision matrix, each computed with:
+<cite>solve_triangular(cholesky(cov, lower=True), eyes[D], lower=True)</cite></p></li>
 </ul>
 </dd>
 </dl>
@@ -677,7 +691,7 @@ is a value (True) or a upper bound (False).</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="askcarl.mixture.GaussianMixture.logpdf">
-<span class="sig-name descname"><span class="pre">logpdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/mixture.html#GaussianMixture.logpdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.mixture.GaussianMixture.logpdf" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">logpdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-100.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">margin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/mixture.html#GaussianMixture.logpdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.mixture.GaussianMixture.logpdf" title="Link to this definition"></a></dt>
 <dd><p>Compute logarithm of probability density.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -685,6 +699,8 @@ is a value (True) or a upper bound (False).</p></li>
 <li><p><strong>x</strong> (<em>array</em>) – The points (vector) at which to evaluate the probability.</p></li>
 <li><p><strong>mask</strong> (<em>array</em>) – A boolean mask of the same shape as <cite>x</cite>, indicating whether the entry
 is a value (True) or a upper bound (False).</p></li>
+<li><p><strong>cutoff</strong> (<em>float</em>) – a lowest logpdf value, below which approximations are acceptable</p></li>
+<li><p><strong>margin</strong> (<em>float</em>) – maximum logpdf difference below which to neglect components.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -699,6 +715,95 @@ is a value (True) or a upper bound (False).</p></li>
 </dd></dl>
 
 </section>
+<section id="module-askcarl.plot">
+<span id="askcarl-plot-module"></span><h2>askcarl.plot module<a class="headerlink" href="#module-askcarl.plot" title="Link to this heading"></a></h2>
+<p>Visualisation of GMM as a corner plot.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="askcarl.plot.confidence_contours">
+<span class="sig-prename descclassname"><span class="pre">askcarl.plot.</span></span><span class="sig-name descname"><span class="pre">confidence_contours</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pdf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">levels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[0.393,</span> <span class="pre">0.675,</span> <span class="pre">0.864]</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/plot.html#confidence_contours"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.plot.confidence_contours" title="Link to this definition"></a></dt>
+<dd><p>Compute PDF thresholds for given enclosed probability levels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pdf</strong> (<em>array</em>) – probability density function as an array.</p></li>
+<li><p><strong>levels</strong> (<em>list</em>) – cumulative probability levels (like corner.py).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>thresholds</strong> – Threshold values.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="askcarl.plot.plot_gmm_corner">
+<span class="sig-prename descclassname"><span class="pre">askcarl.plot.</span></span><span class="sig-name descname"><span class="pre">plot_gmm_corner</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gmm</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limits</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">40</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">levels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[0.393,</span> <span class="pre">0.675,</span> <span class="pre">0.864]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fig</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'k'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">truths</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">truths_kw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{'color':</span> <span class="pre">'tab:blue',</span> <span class="pre">'lw':</span> <span class="pre">1}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_err_frac</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_err_frac_eps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overlap_prevention_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">linewidth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/plot.html#plot_gmm_corner"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.plot.plot_gmm_corner" title="Link to this definition"></a></dt>
+<dd><p>Make analytic corner plot from a Gaussian Mixture model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>gmm</strong> (<em>object</em>) – scikit-learn GaussianMixture</p></li>
+<li><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – axes limits</p></li>
+<li><p><strong>bins</strong> (<em>int</em>) – number of bins</p></li>
+<li><p><strong>levels</strong> (<em>list</em>) – Contour levels enclose given confidence intervals (as in corner.py).</p></li>
+<li><p><strong>fig</strong> (<em>object</em>) – if provided, plot into this matplotlib figure, otherwise a new one figure is created.</p></li>
+<li><p><strong>axes</strong> (<em>object</em>) – if provided, plot into these matplotlib axes, otherwise a new one figure is created.</p></li>
+<li><p><strong>color</strong> (<em>str</em>) – color.</p></li>
+<li><p><strong>labels</strong> (<em>list</em>) – name for each parameter.</p></li>
+<li><p><strong>truths</strong> (<em>list</em>) – list of true values for each parameter.</p></li>
+<li><p><strong>truths_kw</strong> (<em>dict</em>) – arguments passed for styling lines of true parameters.</p></li>
+<li><p><strong>max_err_frac</strong> (<em>float</em>) – Maximum ratio of ellipse misclassifion area to ellipse area,
+to use an ellipse instead of a contour.</p></li>
+<li><p><strong>max_err_frac_eps</strong> (<em>float</em>) – number to add to the total when dividing the number
+of false positive and false negative classifications .</p></li>
+<li><p><strong>overlap_prevention_factor</strong> (<em>float</em>) – Expansion factor for ellipses, when checking for overlapping ellipses.
+Should be &gt;= 1.</p></li>
+<li><p><strong>linewidth</strong> (<em>float</em>) – Width of the line.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>fig</strong> (<em>object</em>) – first return value of matplotlib.subplots</p></li>
+<li><p><strong>axes</strong> (<em>object</em>) – second return value of matplotlib.subplots</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="askcarl.plot.plot_gmm_corner_pdf">
+<span class="sig-prename descclassname"><span class="pre">askcarl.plot.</span></span><span class="sig-name descname"><span class="pre">plot_gmm_corner_pdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">outputfile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gmm</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">40</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limits</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">levels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[0.393,</span> <span class="pre">0.675,</span> <span class="pre">0.864]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Color(0,</span> <span class="pre">0,</span> <span class="pre">.501961,</span> <span class="pre">1)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">600</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">600</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">margin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">40</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">linewidth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">truths</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">truthcolor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Color(.501961,</span> <span class="pre">0,</span> <span class="pre">.501961,</span> <span class="pre">1)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">truthlinewidth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tick_count</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fontname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Helvetica'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/plot.html#plot_gmm_corner_pdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.plot.plot_gmm_corner_pdf" title="Link to this definition"></a></dt>
+<dd><p>Make analytic corner plot from a Gaussian Mixture model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>outputfile</strong> (<em>str</em>) – output file name</p></li>
+<li><p><strong>gmm</strong> (<em>object</em>) – scikit-learn GaussianMixture</p></li>
+<li><p><strong>bins</strong> (<em>int</em>) – number of bins</p></li>
+<li><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – axes limits</p></li>
+<li><p><strong>levels</strong> (<em>list</em>) – Contour levels enclose given confidence intervals (as in corner.py).</p></li>
+<li><p><strong>color</strong> (<em>reportlab.lib.colors.Color</em><em> or </em><em>(</em><em>r</em><em>,</em><em>g</em><em>,</em><em>b</em><em>)</em>) – Stroke color for lines/contours.</p></li>
+<li><p><strong>scale</strong> (<em>float</em>) – scale factor for labels</p></li>
+<li><p><strong>width</strong> (<em>int</em>) – plot width</p></li>
+<li><p><strong>height</strong> (<em>int</em>) – plot height</p></li>
+<li><p><strong>margin</strong> (<em>int</em>) – margin around plot</p></li>
+<li><p><strong>linewidth</strong> (<em>float</em>) – Line width in PDF units.</p></li>
+<li><p><strong>labels</strong> (<em>list</em>) – name for each parameter.</p></li>
+<li><p><strong>truths</strong> (<em>list</em>) – list of true values for each parameter.</p></li>
+<li><p><strong>truthcolor</strong> (<em>reportlab.lib.colors.Color</em><em> or </em><em>(</em><em>r</em><em>,</em><em>g</em><em>,</em><em>b</em><em>)</em>) – Stroke color for lines indicating true value.</p></li>
+<li><p><strong>truthlinewidth</strong> (<em>float</em>) – Line width in PDF units.</p></li>
+<li><p><strong>tick_count</strong> (<em>int</em>) – maximum number of ticks.</p></li>
+<li><p><strong>fontname</strong> (<em>str</em>) – font name</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
 <section id="module-askcarl.utils">
 <span id="askcarl-utils-module"></span><h2>askcarl.utils module<a class="headerlink" href="#module-askcarl.utils" title="Link to this heading"></a></h2>
 <p>Utility functions for dealing with Gaussians and their covariances.</p>
@@ -706,6 +811,7 @@ is a value (True) or a upper bound (False).</p></li>
 <dt class="sig sig-object py" id="askcarl.utils.mvn_logpdf">
 <span class="sig-prename descclassname"><span class="pre">askcarl.utils.</span></span><span class="sig-name descname"><span class="pre">mvn_logpdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prec_chol</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/utils.html#mvn_logpdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.utils.mvn_logpdf" title="Link to this definition"></a></dt>
 <dd><p>Compute log-prob of a Gaussian.</p>
+<p>This keeps jit-compiled functions for each invocation shape.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -780,6 +886,140 @@ is a value (True) or a upper bound (False).</p></li>
 <dd class="field-odd"><p>array</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="askcarl.utils.univariate_normal">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">askcarl.utils.</span></span><span class="sig-name descname"><span class="pre">univariate_normal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mean</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cov</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/utils.html#univariate_normal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.utils.univariate_normal" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Univariate normal distribution.</p>
+<p>Initialise.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mean</strong> (<em>array</em>) – Mean of Gaussian, of shape (D)</p></li>
+<li><p><strong>cov</strong> (<em>array</em>) – covariance matrix. shape (D, D)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="askcarl.utils.univariate_normal.cdf">
+<span class="sig-name descname"><span class="pre">cdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/utils.html#univariate_normal.cdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.utils.univariate_normal.cdf" title="Link to this definition"></a></dt>
+<dd><p>Return cumulative probability.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>x</strong> (<em>float</em>) – position.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>cdf value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="askcarl.utils.univariate_normal.logcdf">
+<span class="sig-name descname"><span class="pre">logcdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/utils.html#univariate_normal.logcdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.utils.univariate_normal.logcdf" title="Link to this definition"></a></dt>
+<dd><p>Return log of the cumulative probability.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>x</strong> (<em>float</em>) – position.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>log(cdf) value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="askcarl.utils.multivariate_normal0">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">askcarl.utils.</span></span><span class="sig-name descname"><span class="pre">multivariate_normal0</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cov</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">precision_cholesky</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_singular</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/utils.html#multivariate_normal0"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.utils.multivariate_normal0" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Multivariate normal distribution.</p>
+<p>Initialise.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mean</strong> (<em>array</em>) – Mean of Gaussian, of shape (D)</p></li>
+<li><p><strong>cov</strong> (<em>array</em>) – covariance matrix. shape (D, D)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="askcarl.utils.multivariate_normal0.cdf">
+<span class="sig-name descname"><span class="pre">cdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/utils.html#multivariate_normal0.cdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.utils.multivariate_normal0.cdf" title="Link to this definition"></a></dt>
+<dd><p>Return cumulative probability.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>x</strong> (<em>float</em>) – position.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>cdf value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="askcarl.utils.multivariate_normal0.logcdf">
+<span class="sig-name descname"><span class="pre">logcdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/utils.html#multivariate_normal0.logcdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.utils.multivariate_normal0.logcdf" title="Link to this definition"></a></dt>
+<dd><p>Return log of the cumulative probability.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>x</strong> (<em>float</em>) – position.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>log(cdf) value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="askcarl.utils.multivariate_normal0.pdf">
+<span class="sig-name descname"><span class="pre">pdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/utils.html#multivariate_normal0.pdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.utils.multivariate_normal0.pdf" title="Link to this definition"></a></dt>
+<dd><p>Return probability density.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>x</strong> (<em>float</em>) – position.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>pdf value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="askcarl.utils.multivariate_normal0.logpdf">
+<span class="sig-name descname"><span class="pre">logpdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/askcarl/utils.html#multivariate_normal0.logpdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#askcarl.utils.multivariate_normal0.logpdf" title="Link to this definition"></a></dt>
+<dd><p>Return log of the probability density.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>x</strong> (<em>float</em>) – position.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>log(pdf) value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 </section>

@@ -11,6 +11,7 @@ Welcome to askcarl's documentation!
    issues
    modules
    lightgmm
+   plot
 
 .. include:: ../README.rst
 

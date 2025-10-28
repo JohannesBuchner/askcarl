@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>askcarl.gaussian &mdash; askcarl 2.1.0 documentation</title>
+  <title>askcarl.gaussian &mdash; askcarl 2.2.2 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
 
@@ -15,7 +15,7 @@
   
         <script src="../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../_static/documentation_options.js?v=20623aea"></script>
+        <script src="../../_static/documentation_options.js?v=219dea72"></script>
         <script src="../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
@@ -36,7 +36,7 @@
             askcarl
           </a>
               <div class="version">
-                2.1.0
+                2.2.2
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -54,6 +54,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../issues.html">Frequently Asked Questions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../modules.html">API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../lightgmm.html">LightGMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plot.html">Plots</a></li>
 </ul>
 
         </div>
@@ -84,10 +85,13 @@
 <span></span><span class="sd">&quot;&quot;&quot;Multivariate Gaussians with support for upper limits and missing data.&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">scipy.linalg</span> <span class="kn">import</span> <span class="n">solve</span>
+<span class="kn">from</span> <span class="nn">scipy.linalg</span> <span class="kn">import</span> <span class="n">solve</span><span class="p">,</span> <span class="n">solve_triangular</span>
 <span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">multivariate_normal</span>
 
-<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">cov_to_prec_cholesky</span><span class="p">,</span> <span class="n">mvn_logpdf</span><span class="p">,</span> <span class="n">mvn_pdf</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="p">(</span><span class="n">cov_to_prec_cholesky</span><span class="p">,</span> <span class="n">multivariate_normal0</span><span class="p">,</span> <span class="n">mvn_logpdf</span><span class="p">,</span>
+                    <span class="n">mvn_pdf</span><span class="p">,</span> <span class="n">univariate_normal</span><span class="p">)</span>
+
+<span class="n">const2pi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="pdfcdf">
@@ -178,13 +182,14 @@
 <span class="sd">    cov: array</span>
 <span class="sd">        covariance matrix of the multivariate normal distribution.</span>
 <span class="sd">    precision_cholesky: array</span>
-<span class="sd">        Cholesky factors of the precision matrix.</span>
+<span class="sd">        Cholesky factors of the precision matrix, computed with:</span>
+<span class="sd">        `solve_triangular(cholesky(cov, lower=True), eyes[D], lower=True)`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">cov</span><span class="p">,</span> <span class="n">precision_cholesky</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mean</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">powers</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">allpowers</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">powers</span> <span class="o">=</span> <span class="p">(</span><span class="mi">3</span> <span class="o">**</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">allpowers</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">powers</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
         <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">allpowers</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">powers</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mean</span> <span class="o">=</span> <span class="n">mean</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cov</span> <span class="o">=</span> <span class="n">cov</span>
@@ -197,10 +202,15 @@
         <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">mean</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> <span class="n">mean</span>
         <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> <span class="n">cov</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">rvs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prec_upper_cache</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">precision_cholesky</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Global log det(Λ) and Λ</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logdet_precision</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">precision_cholesky</span><span class="p">)))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">precision</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">precision_cholesky</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">precision_cholesky</span>
 
 <div class="viewcode-block" id="Gaussian.get_conditional_rv">
 <a class="viewcode-back" href="../../askcarl.html#askcarl.gaussian.Gaussian.get_conditional_rv">[docs]</a>
-    <span class="k">def</span> <span class="nf">get_conditional_rv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mask</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">get_conditional_rv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mask</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Build conditional distribution.</span>
 
 <span class="sd">        Parameters</span>
@@ -221,18 +231,19 @@
 <span class="sd">            Multivariate Normal Distribution of the upper bound dimensions,</span>
 <span class="sd">            conditioned with `mask`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="bp">Ellipsis</span><span class="p">:</span>
-            <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">allpowers</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">powers</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
-            <span class="k">assert</span> <span class="n">mask</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">,),</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">,</span> <span class="n">mask</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="bp">Ellipsis</span><span class="p">:</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">allpowers</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">powers</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+                <span class="k">assert</span> <span class="n">mask</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">,),</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">,</span> <span class="n">mask</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rvs</span><span class="p">:</span>
             <span class="n">cov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cov</span>
             <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="bp">Ellipsis</span><span class="p">:</span>
                 <span class="n">n_exact</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span>
                 <span class="n">n_upper</span> <span class="o">=</span> <span class="mi">0</span>
                 <span class="n">exact_idx</span> <span class="o">=</span> <span class="kc">None</span>
-                <span class="n">upper_idx</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">upper_idx</span> <span class="o">=</span> <span class="kc">None</span>
                 <span class="n">mu_exact</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span>
                 <span class="n">mu_upper</span> <span class="o">=</span> <span class="n">upper_idx</span>
 
@@ -244,33 +255,42 @@
                 <span class="n">conditional_cov</span> <span class="o">=</span> <span class="n">cov_exact</span>
                 <span class="n">cov_cross</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">exact_idx</span><span class="p">,</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>  <span class="c1"># Indices of exact values (PDF)</span>
-                <span class="n">upper_idx</span><span class="p">,</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="o">~</span><span class="n">mask</span><span class="p">)</span>  <span class="c1"># Indices of upper bounds (CDF)</span>
-                <span class="n">n_exact</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">exact_idx</span><span class="p">)</span>
-                <span class="n">n_upper</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">upper_idx</span><span class="p">)</span>
+                <span class="n">non_mask</span> <span class="o">=</span> <span class="o">~</span><span class="n">mask</span>
+                <span class="n">exact_idx</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="n">upper_idx</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="n">n_exact</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+                <span class="n">n_upper</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="n">n_exact</span>
 
                 <span class="c1"># Partition mean and covariance matrix accordingly</span>
-                <span class="n">mu_exact</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">[</span><span class="n">exact_idx</span><span class="p">]</span>  <span class="c1"># Mean for exact values</span>
-                <span class="n">mu_upper</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">[</span><span class="n">upper_idx</span><span class="p">]</span>  <span class="c1"># Mean for upper bounds</span>
+                <span class="n">mu_exact</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>  <span class="c1"># Mean for exact values</span>
+                <span class="n">mu_upper</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">[</span><span class="n">non_mask</span><span class="p">]</span>  <span class="c1"># Mean for upper bounds</span>
 
                 <span class="c1"># Compute the conditional mean and covariance as a function of the upper bounds dimensions</span>
                 <span class="c1"># this is conditioned at the position of the exact coordinates.</span>
-                <span class="n">cov_upper</span> <span class="o">=</span> <span class="n">cov</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ix_</span><span class="p">(</span><span class="n">upper_idx</span><span class="p">,</span> <span class="n">upper_idx</span><span class="p">)]</span>  <span class="c1"># Covariance for upper bounds</span>
-                <span class="n">cov_cross</span> <span class="o">=</span> <span class="n">cov</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ix_</span><span class="p">(</span><span class="n">exact_idx</span><span class="p">,</span> <span class="n">upper_idx</span><span class="p">)]</span>  <span class="c1"># Cross-covariance between exact and upper bounds</span>
+                <span class="n">cov_upper</span> <span class="o">=</span> <span class="n">cov</span><span class="p">[</span><span class="n">non_mask</span><span class="p">,:][:,</span><span class="n">non_mask</span><span class="p">]</span>  <span class="c1"># Covariance for upper bounds</span>
+                <span class="n">cov1</span> <span class="o">=</span> <span class="n">cov</span><span class="p">[</span><span class="n">mask</span><span class="p">,:]</span>
+                <span class="n">cov_cross</span> <span class="o">=</span> <span class="n">cov1</span><span class="p">[:,</span> <span class="n">non_mask</span><span class="p">]</span>  <span class="c1"># Cross-covariance between exact and upper bounds</span>
 
                 <span class="c1"># Extract values from x</span>
-                <span class="n">cov_exact</span> <span class="o">=</span> <span class="n">cov</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ix_</span><span class="p">(</span><span class="n">exact_idx</span><span class="p">,</span> <span class="n">exact_idx</span><span class="p">)]</span>  <span class="c1"># Covariance for exact values</span>
+                <span class="n">cov_exact</span> <span class="o">=</span> <span class="n">cov1</span><span class="p">[:,</span> <span class="n">mask</span><span class="p">]</span>  <span class="c1"># Covariance for exact values</span>
                 <span class="n">cov_exact_sol</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">cov_exact</span><span class="p">,</span> <span class="n">cov_cross</span><span class="p">,</span> <span class="n">assume_a</span><span class="o">=</span><span class="s1">&#39;pos&#39;</span><span class="p">)</span>
                 <span class="n">conditional_cov</span> <span class="o">=</span> <span class="n">cov_upper</span> <span class="o">-</span> <span class="n">cov_cross</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">cov_exact_sol</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="n">prec_chol_exact</span> <span class="o">=</span> <span class="n">cov_to_prec_cholesky</span><span class="p">(</span><span class="n">cov_exact</span><span class="p">)</span>
-                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
-                    <span class="n">prec_chol_exact</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="n">prec_chol_exact</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="c1"># Only factor cov_exact if we do NOT have a global precision factor</span>
+                <span class="k">if</span> <span class="n">n_exact</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">precision_cholesky</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">prec_chol_exact</span> <span class="o">=</span> <span class="n">cov_to_prec_cholesky</span><span class="p">(</span><span class="n">cov_exact</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                        <span class="k">pass</span>
                 <span class="k">assert</span> <span class="n">conditional_cov</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="n">n_upper</span><span class="p">,</span> <span class="n">n_upper</span><span class="p">)</span>
 
             <span class="c1"># Create the conditional multivariate normal distributions</span>
-            <span class="k">if</span> <span class="n">n_upper</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">rv</span> <span class="o">=</span> <span class="n">multivariate_normal</span><span class="p">(</span><span class="n">mean</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_upper</span><span class="p">),</span> <span class="n">cov</span><span class="o">=</span><span class="n">conditional_cov</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">n_upper</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">rv</span> <span class="o">=</span> <span class="n">univariate_normal</span><span class="p">(</span><span class="n">mean</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_upper</span><span class="p">),</span> <span class="n">cov</span><span class="o">=</span><span class="n">conditional_cov</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">n_upper</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">rv</span> <span class="o">=</span> <span class="n">multivariate_normal0</span><span class="p">(</span>
+                    <span class="n">cov</span><span class="o">=</span><span class="n">conditional_cov</span><span class="p">,</span>
+                    <span class="n">precision_cholesky</span><span class="o">=</span><span class="n">prec_chol_exact</span><span class="p">,</span> <span class="n">allow_singular</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">rv</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">rvs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">cov_cross</span><span class="p">,</span> <span class="n">cov_exact</span><span class="p">,</span> <span class="n">cov_exact_sol</span><span class="p">,</span> <span class="n">prec_chol_exact</span><span class="p">,</span> \
@@ -279,7 +299,75 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">rvs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_prepare_conditional_pdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_marginal_logpdf_precision_single</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x_exact</span><span class="p">,</span> <span class="n">mu_exact</span><span class="p">,</span> <span class="n">mask</span><span class="p">,</span> <span class="n">Umask</span><span class="p">,</span> <span class="n">has_upper</span><span class="p">):</span>
+        <span class="c1"># Fast path for a single row (x_exact.shape[0] == 1)</span>
+        <span class="c1"># Λ = R^T R, where R is lower-triangular inverse Cholesky of cov</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">precision_cholesky</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span>
+        <span class="c1"># Residuals on observed dims</span>
+        <span class="n">v_E</span> <span class="o">=</span> <span class="p">(</span><span class="n">x_exact</span> <span class="o">-</span> <span class="n">mu_exact</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">R</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>  <span class="c1"># shape (|E|,)</span>
+        <span class="c1"># Build s ∈ R^n with s_E = v_E, s_U = 0</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">R</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">s</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">v_E</span>
+        <span class="c1"># b = Λ s = R^T (R s)</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">R</span> <span class="o">@</span> <span class="n">s</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">t</span>
+        <span class="n">b_E</span> <span class="o">=</span> <span class="n">b</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">has_upper</span><span class="p">:</span>
+            <span class="c1"># Factor Λ_UU = R_U^T R_U</span>
+            <span class="n">R_U</span> <span class="o">=</span> <span class="n">R</span><span class="p">[:,</span> <span class="n">Umask</span><span class="p">]</span>
+            <span class="n">L_UU</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="n">R_U</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">R_U</span><span class="p">)</span>  <span class="c1"># lower-triangular</span>
+            <span class="n">logdet_UU</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">L_UU</span><span class="p">)))</span>
+            <span class="c1"># Solve Λ_UU y_U = b_U</span>
+            <span class="n">b_U</span> <span class="o">=</span> <span class="n">b</span><span class="p">[</span><span class="n">Umask</span><span class="p">]</span>
+            <span class="n">z</span> <span class="o">=</span> <span class="n">solve_triangular</span><span class="p">(</span><span class="n">L_UU</span><span class="p">,</span> <span class="n">b_U</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">check_finite</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">y_U</span> <span class="o">=</span> <span class="n">solve_triangular</span><span class="p">(</span><span class="n">L_UU</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">check_finite</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="c1"># c = Λ u with u_U = y_U, u_E = 0</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">R</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">u</span><span class="p">[</span><span class="n">Umask</span><span class="p">]</span> <span class="o">=</span> <span class="n">y_U</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="p">(</span><span class="n">R</span> <span class="o">@</span> <span class="n">u</span><span class="p">)</span>
+            <span class="n">c_E</span> <span class="o">=</span> <span class="n">c</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logdet_UU</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="n">c_E</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="c1"># Quadratic form and logdet</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">v_E</span><span class="p">,</span> <span class="n">b_E</span> <span class="o">-</span> <span class="n">c_E</span><span class="p">))</span>
+        <span class="n">logdet_Sigma_EE</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">logdet_precision</span> <span class="o">+</span> <span class="n">logdet_UU</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">v_E</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">q</span> <span class="o">+</span> <span class="n">logdet_Sigma_EE</span> <span class="o">+</span> <span class="n">k</span> <span class="o">*</span> <span class="n">const2pi</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_marginal_logpdf_precision</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x_exact</span><span class="p">,</span> <span class="n">mu_exact</span><span class="p">,</span> <span class="n">exact_idx</span><span class="p">,</span> <span class="n">upper_idx</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">mask</span><span class="p">):</span>
+        <span class="c1"># Marginal logpdf over observed E using global Λ = R^T R</span>
+        <span class="c1"># Requires: self.precision_cholesky, self.logdet_precision, self.precision</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">precision_cholesky</span>
+        <span class="c1"># Select columns for observed and missing sets</span>
+        <span class="n">R_E</span> <span class="o">=</span> <span class="n">R</span><span class="p">[:,</span> <span class="n">mask</span><span class="p">]</span>         <span class="c1"># shape (n, |E|)</span>
+        <span class="n">R_U</span> <span class="o">=</span> <span class="n">R</span><span class="p">[:,</span> <span class="o">~</span><span class="n">mask</span><span class="p">]</span>         <span class="c1"># shape (n, |U|)</span>
+        <span class="c1"># Small precision blocks via Gram matrices</span>
+        <span class="n">Lambda_EE</span> <span class="o">=</span> <span class="n">R_E</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">R_E</span>       <span class="c1"># (|E|, |E|)</span>
+        <span class="n">Lambda_EU</span> <span class="o">=</span> <span class="n">R_E</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">R_U</span>       <span class="c1"># (|E|, |U|)</span>
+        <span class="n">Lambda_UU</span> <span class="o">=</span> <span class="n">R_U</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">R_U</span>       <span class="c1"># (|U|, |U|)</span>
+        <span class="c1"># Cholesky of Λ_UU (lower)</span>
+        <span class="n">L_UU</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="n">Lambda_UU</span><span class="p">)</span>
+        <span class="n">logdet_UU</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">L_UU</span><span class="p">)))</span>
+        <span class="c1"># Residuals on E</span>
+        <span class="n">v_E</span> <span class="o">=</span> <span class="n">x_exact</span> <span class="o">-</span> <span class="n">mu_exact</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>      <span class="c1"># (m, |E|)</span>
+        <span class="c1"># b_E = v_E @ Λ_EE</span>
+        <span class="n">b_E</span> <span class="o">=</span> <span class="n">v_E</span> <span class="o">@</span> <span class="n">Lambda_EE</span>                  <span class="c1"># (m, |E|)</span>
+        <span class="c1"># b_U^T = v_E @ Λ_EU  =&gt; b_U has shape (|U|, m) after transpose</span>
+        <span class="n">b_U_T</span> <span class="o">=</span> <span class="n">v_E</span> <span class="o">@</span> <span class="n">Lambda_EU</span>                <span class="c1"># (m, |U|)</span>
+        <span class="c1"># Solve Λ_UU y_U = b_U for multiple RHS using L_UU</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">solve_triangular</span><span class="p">(</span><span class="n">L_UU</span><span class="p">,</span> <span class="n">b_U_T</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">y_U</span> <span class="o">=</span> <span class="n">solve_triangular</span><span class="p">(</span><span class="n">L_UU</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="c1"># c_E = (Λ_EU @ y_U)^T = y_U^T @ Λ_EU^T</span>
+        <span class="n">c_E</span> <span class="o">=</span> <span class="n">y_U</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">Lambda_EU</span><span class="o">.</span><span class="n">T</span>              <span class="c1"># (m, |E|)</span>
+        <span class="c1"># Quadratic form per row</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">v_E</span> <span class="o">*</span> <span class="p">(</span><span class="n">b_E</span> <span class="o">-</span> <span class="n">c_E</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># log det Σ_EE = − log det Λ + log det Λ_UU</span>
+        <span class="n">logdet_Sigma_EE</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">logdet_precision</span> <span class="o">+</span> <span class="n">logdet_UU</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">q</span> <span class="o">+</span> <span class="n">logdet_Sigma_EE</span> <span class="o">+</span> <span class="n">v_E</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">const2pi</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_prepare_conditional_pdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compute the mixed PDF and CDF for a multivariate Gaussian distribution.</span>
 
@@ -296,7 +384,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">cov_cross</span><span class="p">,</span> <span class="n">cov_exact</span><span class="p">,</span> <span class="n">cov_exact_sol</span><span class="p">,</span> <span class="n">prec_chol_exact</span><span class="p">,</span> <span class="n">dist_conditional</span><span class="p">,</span> \
             <span class="n">exact_idx</span><span class="p">,</span> <span class="n">upper_idx</span><span class="p">,</span> <span class="n">n_exact</span><span class="p">,</span> <span class="n">n_upper</span><span class="p">,</span> <span class="n">mu_exact</span><span class="p">,</span> <span class="n">mu_upper</span> <span class="o">=</span> \
-            <span class="bp">self</span><span class="o">.</span><span class="n">get_conditional_rv</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">get_conditional_rv</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">n_upper</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">x_exact</span> <span class="o">=</span> <span class="n">x</span>
             <span class="c1"># If there are no upper bounds, the conditional mean and cov are just the original ones</span>
@@ -304,8 +392,8 @@
             <span class="n">x_upper</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Compute quantities for upper bound dimensions</span>
-            <span class="n">x_exact</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span><span class="n">exact_idx</span><span class="p">]</span>  <span class="c1"># Known values for the PDF</span>
-            <span class="n">x_upper</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span><span class="n">upper_idx</span><span class="p">]</span>  <span class="c1"># Upper bounds for the CDF</span>
+            <span class="n">x_exact</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span><span class="n">mask</span><span class="p">]</span>   <span class="c1"># Known values for the PDF</span>
+            <span class="n">x_upper</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span><span class="o">~</span><span class="n">mask</span><span class="p">]</span>  <span class="c1"># Upper bounds for the CDF</span>
             <span class="n">newcov</span> <span class="o">=</span> <span class="p">(</span><span class="n">x_exact</span> <span class="o">-</span> <span class="n">mu_exact</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:])</span> <span class="o">@</span> <span class="n">cov_exact_sol</span>
             <span class="n">conditional_mean</span> <span class="o">=</span> <span class="n">mu_upper</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span> <span class="n">newcov</span>
             <span class="k">assert</span> <span class="n">newcov</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">n_upper</span><span class="p">),</span> <span class="p">(</span><span class="n">newcov</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">n_upper</span><span class="p">))</span>
@@ -313,11 +401,11 @@
             <span class="k">assert</span> <span class="n">x_upper</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">n_upper</span><span class="p">)),</span> <span class="p">(</span><span class="n">x_upper</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">n_upper</span><span class="p">)))</span>
 
         <span class="k">return</span> <span class="n">n_upper</span><span class="p">,</span> <span class="n">n_exact</span><span class="p">,</span> <span class="n">cov_cross</span><span class="p">,</span> <span class="n">cov_exact</span><span class="p">,</span> <span class="n">cov_exact_sol</span><span class="p">,</span> <span class="n">prec_chol_exact</span><span class="p">,</span> \
-            <span class="n">x_exact</span><span class="p">,</span> <span class="n">x_upper</span><span class="p">,</span> <span class="n">mu_exact</span><span class="p">,</span> <span class="n">mu_upper</span><span class="p">,</span> <span class="n">conditional_mean</span><span class="p">,</span> <span class="n">dist_conditional</span>
+            <span class="n">x_exact</span><span class="p">,</span> <span class="n">x_upper</span><span class="p">,</span> <span class="n">mu_exact</span><span class="p">,</span> <span class="n">mu_upper</span><span class="p">,</span> <span class="n">exact_idx</span><span class="p">,</span> <span class="n">upper_idx</span><span class="p">,</span> <span class="n">conditional_mean</span><span class="p">,</span> <span class="n">dist_conditional</span>
 
 <div class="viewcode-block" id="Gaussian.conditional_pdf">
 <a class="viewcode-back" href="../../askcarl.html#askcarl.gaussian.Gaussian.conditional_pdf">[docs]</a>
-    <span class="k">def</span> <span class="nf">conditional_pdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">conditional_pdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compute conditional PDF.</span>
 
@@ -343,15 +431,18 @@
                 <span class="k">return</span> <span class="n">mvn_pdf</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">precision_cholesky</span><span class="p">)</span>
 
         <span class="n">n_upper</span><span class="p">,</span> <span class="n">n_exact</span><span class="p">,</span> <span class="n">cov_cross</span><span class="p">,</span> <span class="n">cov_exact</span><span class="p">,</span> <span class="n">cov_exact_sol</span><span class="p">,</span> <span class="n">prec_chol_exact</span><span class="p">,</span> \
-            <span class="n">x_exact</span><span class="p">,</span> <span class="n">x_upper</span><span class="p">,</span> <span class="n">mu_exact</span><span class="p">,</span> <span class="n">mu_upper</span><span class="p">,</span> <span class="n">conditional_mean</span><span class="p">,</span> <span class="n">dist_conditional</span> <span class="o">=</span> \
-            <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_conditional_pdf</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">)</span>
+            <span class="n">x_exact</span><span class="p">,</span> <span class="n">x_upper</span><span class="p">,</span> <span class="n">mu_exact</span><span class="p">,</span> <span class="n">mu_upper</span><span class="p">,</span> <span class="n">exact_idx</span><span class="p">,</span> <span class="n">upper_idx</span><span class="p">,</span> <span class="n">conditional_mean</span><span class="p">,</span> <span class="n">dist_conditional</span> <span class="o">=</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_conditional_pdf</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">n_exact</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="c1"># trivial case: CDF only</span>
             <span class="n">pdf_value</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">prec_chol_exact</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">pdf_value</span> <span class="o">=</span> <span class="n">multivariate_normal</span><span class="p">(</span><span class="n">mu_exact</span><span class="p">,</span> <span class="n">cov_exact</span><span class="p">)</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">x_exact</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">n_exact</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">pdf_value</span> <span class="o">=</span> <span class="n">univariate_normal</span><span class="p">(</span><span class="n">mu_exact</span><span class="p">,</span> <span class="n">cov_exact</span><span class="p">)</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">x_exact</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">pdf_value</span> <span class="o">=</span> <span class="n">multivariate_normal</span><span class="p">(</span><span class="n">mu_exact</span><span class="p">,</span> <span class="n">cov_exact</span><span class="p">)</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">x_exact</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">pdf_value</span> <span class="o">=</span> <span class="n">mvn_pdf</span><span class="p">(</span><span class="n">x_exact</span><span class="p">,</span> <span class="n">mu_exact</span><span class="p">,</span> <span class="n">prec_chol_exact</span><span class="p">)</span>
         <span class="k">assert</span> <span class="n">dist_conditional</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> <span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">n_upper</span><span class="p">,</span> <span class="n">n_exact</span><span class="p">)</span>
@@ -362,20 +453,22 @@
 
 <div class="viewcode-block" id="Gaussian.conditional_logpdf">
 <a class="viewcode-back" href="../../askcarl.html#askcarl.gaussian.Gaussian.conditional_logpdf">[docs]</a>
-    <span class="k">def</span> <span class="nf">conditional_logpdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">conditional_logpdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compute conditional log-PDF.</span>
 
 <span class="sd">        Parameters</span>
-<span class="sd">        -----------</span>
+<span class="sd">        ----------</span>
 <span class="sd">        x: array</span>
 <span class="sd">            The points (vector) at which to evaluate the probability.</span>
 <span class="sd">        mask: array</span>
 <span class="sd">            A boolean mask of the same shape as `x.shape[1]`, indicating whether the entry</span>
 <span class="sd">            is a value (True) or a upper bound (False).</span>
+<span class="sd">        key: int</span>
+<span class="sd">            key for hashing</span>
 
 <span class="sd">        Returns</span>
-<span class="sd">        ----------</span>
+<span class="sd">        -------</span>
 <span class="sd">        logpdf: array</span>
 <span class="sd">            logarithm of the probability density. One value for each `x`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -387,20 +480,86 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">multivariate_normal</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">cov</span><span class="p">)</span><span class="o">.</span><span class="n">logpdf</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)))</span>
 
-        <span class="n">n_upper</span><span class="p">,</span> <span class="n">n_exact</span><span class="p">,</span> <span class="n">cov_cross</span><span class="p">,</span> <span class="n">cov_exact</span><span class="p">,</span> <span class="n">inv_cov_exact</span><span class="p">,</span> <span class="n">prec_chol_exact</span><span class="p">,</span> <span class="n">x_exact</span><span class="p">,</span> <span class="n">x_upper</span><span class="p">,</span> <span class="n">mu_exact</span><span class="p">,</span> <span class="n">mu_upper</span><span class="p">,</span> <span class="n">conditional_mean</span><span class="p">,</span> <span class="n">dist_conditional</span> <span class="o">=</span> \
-            <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_conditional_pdf</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">)</span>
+        <span class="n">n_rows</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">Umask</span> <span class="o">=</span> <span class="o">~</span><span class="n">mask</span>
+        <span class="n">exact_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+        <span class="n">x_exact</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="n">exact_idx</span><span class="p">]</span>
+        <span class="n">n_exact</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">exact_idx</span><span class="p">)</span>
+        <span class="n">mu_exact</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">[</span><span class="n">exact_idx</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">n_rows</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># Single-row special cases</span>
+            <span class="k">if</span> <span class="n">n_exact</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">:</span>
+                <span class="c1"># Pure-PDF over observed subset</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_marginal_logpdf_precision_single</span><span class="p">(</span><span class="n">x_exact</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">mu_exact</span><span class="p">,</span> <span class="n">mask</span><span class="p">,</span> <span class="n">Umask</span><span class="p">,</span> <span class="kc">False</span><span class="p">)[</span><span class="kc">None</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Check if all upper bounds are +inf for this one row</span>
+                <span class="n">x_upper</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="n">Umask</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isposinf</span><span class="p">(</span><span class="n">x_upper</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_marginal_logpdf_precision_single</span><span class="p">(</span><span class="n">x_exact</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">mu_exact</span><span class="p">,</span> <span class="n">mask</span><span class="p">,</span> <span class="n">Umask</span><span class="p">,</span> <span class="kc">True</span><span class="p">)[</span><span class="kc">None</span><span class="p">]</span>
+        <span class="n">n_upper</span><span class="p">,</span> <span class="n">n_exact</span><span class="p">,</span> <span class="n">cov_cross</span><span class="p">,</span> <span class="n">cov_exact</span><span class="p">,</span> <span class="n">inv_cov_exact</span><span class="p">,</span> <span class="n">prec_chol_exact</span><span class="p">,</span> \
+            <span class="n">x_exact</span><span class="p">,</span> <span class="n">x_upper</span><span class="p">,</span> <span class="n">mu_exact</span><span class="p">,</span> <span class="n">mu_upper</span><span class="p">,</span> <span class="n">exact_idx</span><span class="p">,</span> <span class="n">upper_idx</span><span class="p">,</span> <span class="n">conditional_mean</span><span class="p">,</span> <span class="n">dist_conditional</span> <span class="o">=</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_conditional_pdf</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">n_exact</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="c1"># trivial case: CDF only</span>
             <span class="n">logpdf_value</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">prec_chol_exact</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">logpdf_value</span> <span class="o">=</span> <span class="n">multivariate_normal</span><span class="p">(</span><span class="n">mu_exact</span><span class="p">,</span> <span class="n">cov_exact</span><span class="p">)</span><span class="o">.</span><span class="n">logpdf</span><span class="p">(</span><span class="n">x_exact</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">precision_cholesky</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">allpowers</span> <span class="k">if</span> <span class="p">(</span><span class="n">mask</span> <span class="ow">is</span> <span class="bp">Ellipsis</span><span class="p">)</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">powers</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+                <span class="c1"># Use global precision-based marginal over observed E</span>
+                <span class="n">logpdf_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_marginal_logpdf_precision</span><span class="p">(</span>
+                    <span class="n">x_exact</span><span class="o">=</span><span class="n">x_exact</span><span class="p">,</span> <span class="n">mu_exact</span><span class="o">=</span><span class="n">mu_exact</span><span class="p">,</span>
+                    <span class="n">exact_idx</span><span class="o">=</span><span class="n">exact_idx</span><span class="p">,</span> <span class="n">upper_idx</span><span class="o">=</span><span class="n">upper_idx</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">logpdf_value</span> <span class="o">=</span> <span class="n">mvn_logpdf</span><span class="p">(</span><span class="n">x_exact</span><span class="p">,</span> <span class="n">mu_exact</span><span class="p">,</span> <span class="n">prec_chol_exact</span><span class="p">)</span>
+                <span class="c1"># Fallback to covariance-based path</span>
+                <span class="k">if</span> <span class="n">prec_chol_exact</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">n_exact</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">logpdf_value</span> <span class="o">=</span> <span class="n">univariate_normal</span><span class="p">(</span><span class="n">mu_exact</span><span class="p">,</span> <span class="n">cov_exact</span><span class="p">)</span><span class="o">.</span><span class="n">logpdf</span><span class="p">(</span><span class="n">x_exact</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">logpdf_value</span> <span class="o">=</span> <span class="n">multivariate_normal</span><span class="p">(</span><span class="n">mu_exact</span><span class="p">,</span> <span class="n">cov_exact</span><span class="p">)</span><span class="o">.</span><span class="n">logpdf</span><span class="p">(</span><span class="n">x_exact</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">logpdf_value</span> <span class="o">=</span> <span class="n">mvn_logpdf</span><span class="p">(</span><span class="n">x_exact</span><span class="p">,</span> <span class="n">mu_exact</span><span class="p">,</span> <span class="n">prec_chol_exact</span><span class="p">)</span>
         <span class="k">assert</span> <span class="n">dist_conditional</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> <span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">n_upper</span><span class="p">,</span> <span class="n">n_exact</span><span class="p">)</span>
-        <span class="n">logcdf_value</span> <span class="o">=</span> <span class="n">logpdf_value</span> <span class="o">+</span> <span class="n">dist_conditional</span><span class="o">.</span><span class="n">logcdf</span><span class="p">(</span><span class="n">x_upper</span> <span class="o">-</span> <span class="n">conditional_mean</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">logcdf_value</span></div>
+        <span class="k">assert</span> <span class="n">x_upper</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span>
+        <span class="n">mask_inf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isposinf</span><span class="p">(</span><span class="n">x_upper</span><span class="p">)</span>
+        <span class="n">cols_keep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="o">~</span><span class="n">mask_inf</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="c1"># the trivial case is PDF only, because all are uninformative upper limits</span>
+        <span class="n">rows_trivial</span> <span class="o">=</span> <span class="n">mask_inf</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">rows_nontrivial</span> <span class="o">=</span> <span class="o">~</span><span class="n">rows_trivial</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">rows_nontrivial</span><span class="p">)</span> <span class="ow">and</span> <span class="n">cols_keep</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="n">n_keep</span> <span class="o">=</span> <span class="n">cols_keep</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">n_keep</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">cols_keep</span><span class="p">):</span>
+                <span class="n">X</span> <span class="o">=</span> <span class="n">x_upper</span><span class="p">[</span><span class="n">rows_nontrivial</span><span class="p">,:]</span>
+                <span class="n">dist_reduced</span> <span class="o">=</span> <span class="n">dist_conditional</span>
+                <span class="n">M</span> <span class="o">=</span> <span class="n">conditional_mean</span><span class="p">[</span><span class="n">rows_nontrivial</span><span class="p">,:]</span>
+            <span class="k">elif</span> <span class="n">n_keep</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">cols_keep</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">dist_reduced</span> <span class="o">=</span> <span class="n">univariate_normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">cov</span><span class="o">=</span><span class="n">dist_conditional</span><span class="o">.</span><span class="n">cov</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span><span class="n">idx</span><span class="p">])</span>
+                <span class="n">X</span> <span class="o">=</span> <span class="n">x_upper</span><span class="p">[</span><span class="n">rows_nontrivial</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span>
+                <span class="n">M</span> <span class="o">=</span> <span class="n">conditional_mean</span><span class="p">[</span><span class="n">rows_nontrivial</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cov_remaining</span> <span class="o">=</span> <span class="n">dist_conditional</span><span class="o">.</span><span class="n">cov</span><span class="p">[</span><span class="n">cols_keep</span><span class="p">,:][:,</span> <span class="n">cols_keep</span><span class="p">]</span>
+                <span class="n">prec_chol_exact</span> <span class="o">=</span> <span class="n">cov_to_prec_cholesky</span><span class="p">(</span><span class="n">cov_remaining</span><span class="p">)</span>
+                <span class="n">dist_reduced</span> <span class="o">=</span> <span class="n">multivariate_normal0</span><span class="p">(</span>
+                    <span class="n">cov</span><span class="o">=</span><span class="n">cov_remaining</span><span class="p">,</span> <span class="n">precision_cholesky</span><span class="o">=</span><span class="n">prec_chol_exact</span><span class="p">,</span>
+                    <span class="n">allow_singular</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">X</span> <span class="o">=</span> <span class="n">x_upper</span><span class="p">[:,</span> <span class="n">cols_keep</span><span class="p">][</span><span class="n">rows_nontrivial</span><span class="p">,:]</span>
+                <span class="n">M</span> <span class="o">=</span> <span class="n">conditional_mean</span><span class="p">[:,</span> <span class="n">cols_keep</span><span class="p">][</span><span class="n">rows_nontrivial</span><span class="p">,:]</span>
+            <span class="c1"># Only rows with any finite bounds need the CDF</span>
+            <span class="n">logcdf_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">logcdf_nontrivial</span> <span class="o">=</span> <span class="n">dist_reduced</span><span class="o">.</span><span class="n">logcdf</span><span class="p">(</span><span class="n">X</span> <span class="o">-</span> <span class="n">M</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="c1"># invalid construction.</span>
+                <span class="c1"># this data point is not possible with this Gaussian.</span>
+                <span class="k">return</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span> <span class="o">+</span> <span class="n">logcdf_value</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">iscomplexobj</span><span class="p">(</span><span class="n">logcdf_nontrivial</span><span class="p">):</span>
+                <span class="n">logcdf_nontrivial</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">logcdf_nontrivial</span><span class="p">)</span>
+            <span class="n">logcdf_value</span><span class="p">[</span><span class="n">rows_nontrivial</span><span class="p">]</span> <span class="o">+=</span> <span class="n">logcdf_nontrivial</span>
+            <span class="k">return</span> <span class="n">logcdf_value</span> <span class="o">+</span> <span class="n">logpdf_value</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">logpdf_value</span></div>
 
 
 <div class="viewcode-block" id="Gaussian.pdf">
@@ -425,7 +584,8 @@
         <span class="k">assert</span> <span class="n">mask</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">),</span> <span class="p">(</span><span class="n">mask</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">))</span>
         <span class="k">assert</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mask</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">),</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">))</span>
         <span class="n">pdf_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
-        <span class="n">powers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">powers</span><span class="p">)</span>
+        <span class="n">code</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">isposinf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+        <span class="n">powers</span> <span class="o">=</span> <span class="n">code</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">powers</span>
         <span class="n">unique_powers</span><span class="p">,</span> <span class="n">unique_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">powers</span><span class="p">,</span> <span class="n">return_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">power</span><span class="p">,</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">unique_powers</span><span class="p">,</span> <span class="n">unique_indices</span><span class="p">):</span>
             <span class="n">members</span> <span class="o">=</span> <span class="n">powers</span> <span class="o">==</span> <span class="n">power</span>
@@ -433,7 +593,7 @@
                 <span class="n">mask_here</span> <span class="o">=</span> <span class="bp">Ellipsis</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">mask_here</span> <span class="o">=</span> <span class="n">mask</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="p">:]</span>
-            <span class="n">pdf_values</span><span class="p">[</span><span class="n">members</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conditional_pdf</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">members</span><span class="p">,:],</span> <span class="n">mask_here</span><span class="p">)</span>
+            <span class="n">pdf_values</span><span class="p">[</span><span class="n">members</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conditional_pdf</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">members</span><span class="p">,:],</span> <span class="n">mask_here</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">power</span><span class="p">)</span>
         <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">pdf_values</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> <span class="n">pdf_values</span>
         <span class="k">return</span> <span class="n">pdf_values</span></div>
 
@@ -457,9 +617,12 @@
 <span class="sd">        logpdf: array</span>
 <span class="sd">            logarithm of the probability density. One value for each `x`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="bp">Ellipsis</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">conditional_logpdf</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">Ellipsis</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),))</span>
         <span class="k">assert</span> <span class="n">mask</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">),</span> <span class="p">(</span><span class="n">mask</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">))</span>
         <span class="k">assert</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mask</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">),</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">))</span>
-        <span class="n">powers</span> <span class="o">=</span> <span class="p">(</span><span class="n">mask</span> <span class="o">*</span> <span class="mi">1</span><span class="p">)</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">powers</span>
+        <span class="n">code</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">isposinf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+        <span class="n">powers</span> <span class="o">=</span> <span class="n">code</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">powers</span>
         <span class="n">unique_powers</span><span class="p">,</span> <span class="n">unique_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">powers</span><span class="p">,</span> <span class="n">return_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique_powers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">unique_powers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">allpowers</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">conditional_logpdf</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">Ellipsis</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),))</span>
@@ -470,7 +633,7 @@
                 <span class="n">mask_here</span> <span class="o">=</span> <span class="bp">Ellipsis</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">mask_here</span> <span class="o">=</span> <span class="n">mask</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="p">:]</span>
-            <span class="n">logpdf_values</span><span class="p">[</span><span class="n">members</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conditional_logpdf</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">members</span><span class="p">,:],</span> <span class="n">mask_here</span><span class="p">)</span>
+            <span class="n">logpdf_values</span><span class="p">[</span><span class="n">members</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conditional_logpdf</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">members</span><span class="p">,:],</span> <span class="n">mask_here</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">power</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">logpdf_values</span></div>
 </div>
 

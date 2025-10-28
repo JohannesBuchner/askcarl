@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>askcarl.lightgmm &mdash; askcarl 2.1.0 documentation</title>
+  <title>askcarl.lightgmm &mdash; askcarl 2.2.2 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
 
@@ -15,7 +15,7 @@
   
         <script src="../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../_static/documentation_options.js?v=20623aea"></script>
+        <script src="../../_static/documentation_options.js?v=219dea72"></script>
         <script src="../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
@@ -36,7 +36,7 @@
             askcarl
           </a>
               <div class="version">
-                2.1.0
+                2.2.2
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -54,6 +54,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../issues.html">Frequently Asked Questions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../modules.html">API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../lightgmm.html">LightGMM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plot.html">Plots</a></li>
 </ul>
 
         </div>
@@ -187,6 +188,20 @@
 <span class="sd">        list of component weights, of shape (K,)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">log_prob_fn</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">prec_chol</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute Multivariate Gaussian log-probability density.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        mu: array</span>
+<span class="sd">            mean</span>
+<span class="sd">        prec_chol: array</span>
+<span class="sd">            component precision matrix</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float:</span>
+<span class="sd">            log-probability</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">mvn_logpdf</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">prec_chol</span><span class="p">)</span>
     <span class="c1"># Vectorize over components</span>
     <span class="n">log_probs</span> <span class="o">=</span> <span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">log_prob_fn</span><span class="p">,</span> <span class="n">in_axes</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))(</span>
@@ -204,6 +219,24 @@
 
 
 <span class="k">def</span> <span class="nf">kmeans_assign_underpopulated_labels</span><span class="p">(</span><span class="n">distances</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">cardinality</span><span class="p">,</span> <span class="n">min_cluster_size</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Assign more members to underpopulated clusters.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    distances: array</span>
+<span class="sd">        euclidean distance of member to cluster center, of shape (N, K)</span>
+<span class="sd">    labels: array</span>
+<span class="sd">        member of label</span>
+<span class="sd">    cardinality: array</span>
+<span class="sd">        number of cluster members for each cluster, of shape (K)</span>
+<span class="sd">    min_cluster_size: int</span>
+<span class="sd">        minimum number of cluster members, of shape (K)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    labels: array</span>
+<span class="sd">        modified labels after re-assignment</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">underpopulated</span> <span class="o">=</span> <span class="n">cardinality</span> <span class="o">&lt;</span> <span class="n">min_cluster_size</span>
     <span class="k">for</span> <span class="n">label_to_replace</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">underpopulated</span><span class="p">)[</span><span class="mi">0</span><span class="p">]:</span>
         <span class="c1"># find nearest and assign them to the cluster</span>
@@ -215,6 +248,30 @@
 
 <span class="nd">@partial</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">,</span> <span class="n">static_argnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;K&#39;</span><span class="p">])</span>
 <span class="k">def</span> <span class="nf">kmeans_assign_labels</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">centroids</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Assign members to clusters and compute cluster statistics.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X: array</span>
+<span class="sd">        data, of shape (N, D)</span>
+<span class="sd">    centroids: array</span>
+<span class="sd">        cluster centers, of shape (K, D)</span>
+<span class="sd">    K: int</span>
+<span class="sd">        number of clusters.</span>
+<span class="sd">    sample_weight: array</span>
+<span class="sd">        weights. shape (N,)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    distances: array</span>
+<span class="sd">        euclidean distance of member to cluster center, of shape (N, K)</span>
+<span class="sd">    labels: array</span>
+<span class="sd">        membership for each data point in X, of shape (N,)</span>
+<span class="sd">    cardinality: array</span>
+<span class="sd">        number of cluster members for each cluster, of shape (K)</span>
+<span class="sd">    counts: array</span>
+<span class="sd">        cluster weight, of shape (K). If weights are 1 then this is the same as cardinality.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># compute distances, update labels, update centers, update labels.</span>
     <span class="n">N</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
 
@@ -235,7 +292,27 @@
 
 
 <span class="nd">@partial</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">,</span> <span class="n">static_argnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;K&#39;</span><span class="p">])</span>
-<span class="k">def</span> <span class="nf">kmeans_assign_centroids_from_labels_weighted</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">kmeans_compute_cluster_statistics</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute cluster statistics from cluster members.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X: array</span>
+<span class="sd">        data, of shape (N, D)</span>
+<span class="sd">    labels: array</span>
+<span class="sd">        membership for each data point in X, of shape (N,)</span>
+<span class="sd">    K: int</span>
+<span class="sd">        number of clusters.</span>
+<span class="sd">    sample_weight: array</span>
+<span class="sd">        weights. shape (N,)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    centroids: array</span>
+<span class="sd">        weighted centroids, of shape (K, D)</span>
+<span class="sd">    counts: array</span>
+<span class="sd">        cluster weight, of shape (K). If weights are 1 then this is the same as cardinality.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">N</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
     <span class="n">weights</span> <span class="o">=</span> <span class="n">sample_weight</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
     <span class="n">weighted_X</span> <span class="o">=</span> <span class="n">X</span> <span class="o">*</span> <span class="n">weights</span>
@@ -245,6 +322,30 @@
 
 
 <span class="k">def</span> <span class="nf">relocate_empty_clusters_dense</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">distances</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">,</span> <span class="n">centers_sum</span><span class="p">,</span> <span class="n">weight_in_clusters</span><span class="p">,</span> <span class="n">labels</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Change cluster centroids towards distant cluster members.</span>
+
+<span class="sd">    Existing cluster centroids statistics (weight and centers) are modified.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X: array</span>
+<span class="sd">        data, of shape (N, D)</span>
+<span class="sd">    distances: array</span>
+<span class="sd">        euclidean distance of member to cluster center, of shape (N, K)</span>
+<span class="sd">    sample_weight: array</span>
+<span class="sd">        weights. shape (N,)</span>
+<span class="sd">    centers_sum: array</span>
+<span class="sd">        weighted centroids, of shape (K, D). Warning: *modified in place*</span>
+<span class="sd">    weight_in_clusters: array</span>
+<span class="sd">        cluster weight, of shape (K).</span>
+<span class="sd">    labels: array</span>
+<span class="sd">        membership for each data point in X, of shape (N,)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    centroids: array</span>
+<span class="sd">        updated centroid positions, of shape (K, D)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">N</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
     <span class="n">K</span><span class="p">,</span> <span class="o">=</span> <span class="n">weight_in_clusters</span><span class="o">.</span><span class="n">shape</span>
     <span class="k">assert</span> <span class="n">distances</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">K</span><span class="p">)</span>
@@ -260,6 +361,7 @@
 
     <span class="n">assigned_distances</span> <span class="o">=</span> <span class="n">distances</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">N</span><span class="p">),</span> <span class="n">labels</span><span class="p">]</span>
     <span class="n">far_from_centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argpartition</span><span class="p">(</span><span class="n">assigned_distances</span><span class="p">,</span> <span class="o">-</span><span class="n">n_empty</span><span class="p">)[</span><span class="o">-</span><span class="n">n_empty</span><span class="p">:]</span>
+    <span class="n">centers_sum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">centers_sum</span><span class="p">)</span>
 
     <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_empty</span><span class="p">):</span>
         <span class="n">new_cluster_id</span> <span class="o">=</span> <span class="n">empty_clusters</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
@@ -278,6 +380,28 @@
 
 
 <span class="k">def</span> <span class="nf">kmeans_single_iteration</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">centroid_indices</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">min_cluster_size</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Update of k-means.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X: array</span>
+<span class="sd">        data, of shape (N, D)</span>
+<span class="sd">    centroid_indices: array</span>
+<span class="sd">        indices of X which will serve as initial cluster centroids, of shape (K,)</span>
+<span class="sd">    sample_weight: array</span>
+<span class="sd">        weights. shape (N,), or None</span>
+<span class="sd">    min_cluster_size: int</span>
+<span class="sd">        minimum number of cluster members, of shape (K)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    labels: array</span>
+<span class="sd">        membership for each data point in X, of shape (N,)</span>
+<span class="sd">    centroids: array</span>
+<span class="sd">        weighted centroids, of shape (K, D).</span>
+<span class="sd">    cardinality: array</span>
+<span class="sd">        number of cluster members for each cluster, of shape (K)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># compute distances, update labels, update centers, update labels.</span>
     <span class="n">N</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
     <span class="n">K</span><span class="p">,</span> <span class="o">=</span> <span class="n">centroid_indices</span><span class="o">.</span><span class="n">shape</span>
@@ -288,7 +412,7 @@
         <span class="n">X</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">K</span><span class="o">=</span><span class="n">K</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">)</span>
 
     <span class="c1"># === M-step: compute cluster sums and counts ===</span>
-    <span class="n">summed</span><span class="p">,</span> <span class="n">counts</span> <span class="o">=</span> <span class="n">kmeans_assign_centroids_from_labels_weighted</span><span class="p">(</span>
+    <span class="n">summed</span><span class="p">,</span> <span class="n">counts</span> <span class="o">=</span> <span class="n">kmeans_compute_cluster_statistics</span><span class="p">(</span>
         <span class="n">X</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">)</span>
 
     <span class="c1"># === Handle empty clusters ===</span>
@@ -300,7 +424,43 @@
     <span class="k">return</span> <span class="n">labels_final</span><span class="p">,</span> <span class="n">centers_relocated</span><span class="p">,</span> <span class="n">cardinality</span>
 
 
-<span class="k">def</span> <span class="nf">kmeans_iterate</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">min_cluster_size</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">kmeans_iterate</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">min_cluster_size</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">TT</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">invTT</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_tries</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Iterate K-means.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X: array</span>
+<span class="sd">        data, of shape (N, D)</span>
+<span class="sd">    K: int</span>
+<span class="sd">        number of clusters.</span>
+<span class="sd">    sample_weight: array</span>
+<span class="sd">        weights. shape (N,)</span>
+<span class="sd">    min_cluster_size: int</span>
+<span class="sd">        minimum number of cluster members, of shape (K) Returns</span>
+<span class="sd">    rng: np.random</span>
+<span class="sd">        Pseudo-random number generator to use.</span>
+<span class="sd">    verbose: bool</span>
+<span class="sd">        whether to print to stdout in case of success or failure</span>
+<span class="sd">    TT: array</span>
+<span class="sd">        Whitening transform matrix. If none, no whitening is applied.</span>
+<span class="sd">    invTT: array</span>
+<span class="sd">        Inverse whitening transform matrix. If none, no whitening is applied.</span>
+<span class="sd">    max_tries: int</span>
+<span class="sd">        number of tries for a reconstruction</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    labels: array</span>
+<span class="sd">        membership for each data point in X, of shape (N,)</span>
+<span class="sd">    centroids: array</span>
+<span class="sd">        weighted centroids, of shape (K, D).</span>
+<span class="sd">    covariances: array</span>
+<span class="sd">        Empirical covariance matrix of the members of each cluster, of shape (K, D, D)</span>
+<span class="sd">    precisions_chol: array</span>
+<span class="sd">        list of precision matrices of the members of each cluster, of shape (K, D, D)</span>
+<span class="sd">    cardinality: array</span>
+<span class="sd">        fraction of sample N in each cluster, of shape (K,)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">N</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span>
     <span class="n">covariances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">K</span><span class="p">,</span> <span class="n">D</span><span class="p">,</span> <span class="n">D</span><span class="p">))</span>
     <span class="n">precisions_chol</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">K</span><span class="p">,</span> <span class="n">D</span><span class="p">,</span> <span class="n">D</span><span class="p">))</span>
@@ -308,16 +468,25 @@
         <span class="n">sample_weight_actual</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">sample_weight_actual</span> <span class="o">=</span> <span class="n">sample_weight</span>
-    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">TT</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">XT</span> <span class="o">=</span> <span class="n">X</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># apply whitening transform</span>
+        <span class="n">mean</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">XT</span> <span class="o">=</span> <span class="p">(</span><span class="n">X</span> <span class="o">-</span> <span class="n">mean</span><span class="p">)</span> <span class="o">@</span> <span class="n">TT</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_tries</span><span class="p">):</span>
         <span class="n">centroid_indices</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">K</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="n">labels</span><span class="p">,</span> <span class="n">centroids</span><span class="p">,</span> <span class="n">cardinalities</span> <span class="o">=</span> <span class="n">kmeans_single_iteration</span><span class="p">(</span>
-            <span class="n">X</span><span class="p">,</span> <span class="n">centroid_indices</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight_actual</span><span class="p">,</span> <span class="n">min_cluster_size</span><span class="o">=</span><span class="n">min_cluster_size</span><span class="p">)</span>
+            <span class="n">XT</span><span class="p">,</span> <span class="n">centroid_indices</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight_actual</span><span class="p">,</span> <span class="n">min_cluster_size</span><span class="o">=</span><span class="n">min_cluster_size</span><span class="p">)</span>
         <span class="c1"># to fail fast, start with the smallest cluster</span>
         <span class="n">order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">cardinalities</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">cardinalities</span><span class="p">[</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">&lt;</span> <span class="n">min_cluster_size</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
                 <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;fail, some clusters are too small!&#39;</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">D</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">min_cluster_size</span><span class="p">,</span> <span class="n">cardinalities</span><span class="p">[</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
             <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">invTT</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># apply the reverse whitening transform</span>
+            <span class="n">centroids</span> <span class="o">=</span> <span class="n">centroids</span> <span class="o">@</span> <span class="n">invTT</span> <span class="o">+</span> <span class="n">mean</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">order</span><span class="p">:</span>
                 <span class="n">mask</span> <span class="o">=</span> <span class="n">labels</span> <span class="o">==</span> <span class="n">k</span>
@@ -328,14 +497,19 @@
             <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
                 <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;success!&#39;</span><span class="p">,</span> <span class="n">cardinalities</span><span class="p">[</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
             <span class="k">return</span> <span class="n">labels</span><span class="p">,</span> <span class="n">centroids</span><span class="p">,</span> <span class="n">covariances</span><span class="p">,</span> <span class="n">precisions_chol</span><span class="p">,</span> <span class="n">cardinalities</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
-        <span class="k">except</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+        <span class="k">except</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="c1"># not a successful construction, try again</span>
-            <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">max_tries</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">e</span>
         <span class="k">except</span> <span class="ne">FloatingPointError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="c1"># not a successful construction, try again</span>
-            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">max_tries</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;fail!&#39;</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">cardinalities</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
-            <span class="k">continue</span>
+                <span class="k">continue</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">e</span>
 
 
 <div class="viewcode-block" id="LightGMM">
@@ -346,7 +520,7 @@
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">n_components</span><span class="p">,</span> <span class="n">refine_weights</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
         <span class="n">init_kwargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">n_init</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="s1">&#39;random&#39;</span><span class="p">),</span>
-        <span class="n">warm_start</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">covariance_type</span><span class="o">=</span><span class="s1">&#39;full&#39;</span>
+        <span class="n">warm_start</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">covariance_type</span><span class="o">=</span><span class="s1">&#39;full&#39;</span><span class="p">,</span> <span class="n">TT</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">invTT</span><span class="o">=</span><span class="kc">None</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialise.</span>
 
@@ -362,6 +536,10 @@
 <span class="sd">            not supported, has to be False</span>
 <span class="sd">        covariance_type: str</span>
 <span class="sd">            only &quot;full&quot; is supported</span>
+<span class="sd">        TT: array</span>
+<span class="sd">            Whitening transform matrix to apply when initialising centroids. If none, no whitening is applied.</span>
+<span class="sd">        invTT: array</span>
+<span class="sd">            Inverse transform of TT.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">assert</span> <span class="ow">not</span> <span class="n">warm_start</span>
         <span class="k">assert</span> <span class="n">covariance_type</span> <span class="o">==</span> <span class="s1">&#39;full&#39;</span>
@@ -372,8 +550,25 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">refine_weights</span> <span class="o">=</span> <span class="n">refine_weights</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">init_kwargs</span> <span class="o">=</span> <span class="n">init_kwargs</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialised</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">TT</span> <span class="o">=</span> <span class="n">TT</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invTT</span> <span class="o">=</span> <span class="n">invTT</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Make string representation.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;LightGMM(n_components=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="si">}</span><span class="s1">, covariance_type=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span><span class="si">}</span><span class="s1">)&#39;</span>
 
     <span class="k">def</span> <span class="nf">_cluster</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply clustering.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X: array</span>
+<span class="sd">            data, of shape (N, D)</span>
+<span class="sd">        sample_weight: array</span>
+<span class="sd">            weights. shape (N,)</span>
+<span class="sd">        rng: np.random</span>
+<span class="sd">            Pseudo-random number generator to use.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">kmeans_</span> <span class="o">=</span> <span class="n">KMeans</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">init_kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">means_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kmeans_</span><span class="o">.</span><span class="n">cluster_centers_</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">labels_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kmeans_</span><span class="o">.</span><span class="n">labels_</span>
@@ -381,6 +576,15 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">initialised</span> <span class="o">=</span> <span class="kc">True</span>
 
     <span class="k">def</span> <span class="nf">_characterize_clusters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Characterize the clusters.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X: array</span>
+<span class="sd">            data, of shape (N, D)</span>
+<span class="sd">        sample_weight: NoneType</span>
+<span class="sd">            weights. shape (N,)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">covariances_</span><span class="p">,</span> <span class="n">well_defined</span> <span class="o">=</span> <span class="n">local_covariances</span><span class="p">(</span>
             <span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">indices_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">)</span>
 
@@ -416,7 +620,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">labels_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariances_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">precisions_cholesky_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span> <span class="o">=</span> <span class="n">kmeans_iterate</span><span class="p">(</span>
                 <span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">,</span>
                 <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="n">rng</span><span class="p">,</span>
-                <span class="n">min_cluster_size</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+                <span class="n">min_cluster_size</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">TT</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">TT</span><span class="p">,</span> <span class="n">invTT</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">invTT</span><span class="p">)</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">refine_weights</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span> <span class="o">=</span> <span class="n">refine_weights_jax</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">precisions_cholesky_</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
@@ -534,8 +738,6 @@
 <span class="sd">        ----------</span>
 <span class="sd">        n_components: int</span>
 <span class="sd">            number of Gaussian components.</span>
-<span class="sd">        refine_weights: bool</span>
-<span class="sd">            whether to include a E step at the end.</span>
 <span class="sd">        init_kwargs: dict</span>
 <span class="sd">            arguments passed to KMeans</span>
 <span class="sd">        warm_start: bool</span>
@@ -552,6 +754,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">initialised</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">gmm1</span> <span class="o">=</span> <span class="n">LightGMM</span><span class="p">(</span><span class="n">n_components</span><span class="p">,</span> <span class="n">init_kwargs</span><span class="o">=</span><span class="n">init_kwargs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">gmm2</span> <span class="o">=</span> <span class="n">LightGMM</span><span class="p">(</span><span class="n">n_components</span><span class="p">,</span> <span class="n">init_kwargs</span><span class="o">=</span><span class="n">init_kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Make string representation.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;LightGMM2(n_components=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="si">}</span><span class="s1">, covariance_type=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span><span class="si">}</span><span class="s1">)&#39;</span>
 
 <div class="viewcode-block" id="LightGMM2.fit">
 <a class="viewcode-back" href="../../askcarl.html#askcarl.lightgmm.LightGMM2.fit">[docs]</a>
@@ -702,6 +908,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">n_gmms</span> <span class="o">=</span> <span class="n">n_gmms</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">gmms</span> <span class="o">=</span> <span class="p">[</span><span class="n">LightGMM</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_gmms</span><span class="p">)]</span>
 
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Make string representation.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;LightBaggingGMM([</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">gmms</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">] * </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_gmms</span><span class="si">}</span><span class="s1">)&#39;</span>
+
 <div class="viewcode-block" id="LightBaggingGMM.fit">
 <a class="viewcode-back" href="../../askcarl.html#askcarl.lightgmm.LightBaggingGMM.fit">[docs]</a>
     <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="p">):</span>
@@ -720,7 +930,7 @@
             <span class="n">gmm</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="n">rng</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">labels_</span> <span class="o">=</span> <span class="n">gmm</span><span class="o">.</span><span class="n">labels_</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">gmm</span><span class="o">.</span><span class="n">weights_</span> <span class="k">for</span> <span class="n">gmm</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">gmms</span><span class="p">])</span> <span class="o">/</span> <span class="mf">2.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">gmm</span><span class="o">.</span><span class="n">weights_</span> <span class="k">for</span> <span class="n">gmm</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">gmms</span><span class="p">])</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gmms</span><span class="p">)</span>
         <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="n">gmm</span><span class="o">.</span><span class="n">n_components</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_gmms</span><span class="p">,)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">means_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">gmm</span><span class="o">.</span><span class="n">means_</span> <span class="k">for</span> <span class="n">gmm</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">gmms</span><span class="p">])</span>
         <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">means_</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="n">gmm</span><span class="o">.</span><span class="n">n_components</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_gmms</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
