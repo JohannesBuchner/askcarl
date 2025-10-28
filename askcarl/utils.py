@@ -160,6 +160,36 @@ class univariate_normal:
             (len(x),)
         )
 
+    def pdf(self, x):
+        """Return probability density.
+
+        Parameters
+        ----------
+        x: float
+            position.
+
+        Returns
+        -------
+        float
+            pdf value.
+        """
+        return np.exp(-0.5 * ((x - self.mean) / self.std)**2) / np.sqrt(2 * np.pi) / self.std
+
+    def logpdf(self, x):
+        """Return log of probability density.
+
+        Parameters
+        ----------
+        x: float
+            position.
+
+        Returns
+        -------
+        float
+            logpdf value.
+        """
+        return -0.5 * ((x - self.mean) / self.std)**2 - 0.5 * np.log(2 * np.pi * self.std**2)
+
     def logcdf(self, x):
         """Return log of the cumulative probability.
 
