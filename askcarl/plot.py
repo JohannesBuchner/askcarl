@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from contourpy import contour_generator
 from matplotlib.colors import to_rgb as _mpl_to_rgb
-from reportlab.lib.colors import Color, black
+from reportlab.lib.colors import Color, black, navy, purple
 from reportlab.pdfgen import canvas
 
 _TWO_PI = 2.0 * np.pi
@@ -333,57 +333,6 @@ def _map_xy(xx, yy, rect, xlim, ylim):
     return px, py
 
 
-def _rec(A, tol):
-    """Simplify polyline with Douglas–Peucker.
-
-    Parameters
-    ----------
-    A: array
-        points of line
-    tol: float
-        tolerance
-
-    Returns
-    -------
-    P: array
-        new points
-    """
-    if A.shape[0] < 3:
-        return A
-    v = A[-1] - A[0]
-    nv = np.hypot(v[0], v[1]) or 1.0
-    d = np.abs((A[1:-1] - A[0])[:, 0] * v[1] - (A[1:-1] - A[0])[:, 1] * v[0]) / nv
-    i = np.argmax(d)
-    dmax = d[i]
-    if dmax > tol:
-        left = _rec(A[:i + 2])
-        right = _rec(A[i + 1:])
-        return np.vstack([left[:-1], right])
-    else:
-        return np.vstack([A[0], A[-1]])
-
-
-def _rdp(points, tol):
-    """Simplify polyline with Douglas–Peucker.
-
-    Parameters
-    ----------
-    points: array
-        points of line
-    tol: float
-        tolerance
-
-    Returns
-    -------
-    P: array
-        new points
-    """
-    P = np.asarray(points)
-    if P.shape[0] < 3 or tol <= 0:
-        return P
-    return _rec(P, tol)
-
-
 def _draw_contours_pdf(
     canvas,
     rect,
@@ -392,7 +341,6 @@ def _draw_contours_pdf(
     level_segs,
     color=black,
     lw=1.0,
-    simplify_tol=0.0,
     clip=True,
 ):
     """Draw contour lines.
@@ -413,8 +361,6 @@ def _draw_contours_pdf(
         color.
     lw: float
         line width
-    simplify_tol: float
-        tolerance for simplifying curve
     clip: bool
         whether to clip the contour at the border
     """
@@ -431,9 +377,6 @@ def _draw_contours_pdf(
         pts_px = np.empty_like(seg)
         for k in range(seg.shape[0]):
             pts_px[k, 0], pts_px[k, 1] = _map_xy(seg[k, 0], seg[k, 1], rect, xlim, ylim)
-        # Simplify in pixel space
-        if simplify_tol > 0.0:
-            pts_px = _rdp(pts_px, simplify_tol)
         # Draw path
         p = canvas.beginPath()
         p.moveTo(pts_px[0, 0], pts_px[0, 1])
@@ -536,7 +479,7 @@ def _compute_rects(ndim, width, height, margin):
 
 
 def _build_axes_form(
-    canvas, rects, labels, limits, tick_count, tickfontsize, labelfontsize
+    canvas, rects, labels, limits, tick_count, tickfontsize, labelfontsize, fontname="Helvetica"
 ):
     """Set up panels.
 
@@ -556,6 +499,8 @@ def _build_axes_form(
         font size for tick labels
     labelfontsize: float
         font size for axis labels.
+    fontname: str
+        font name
     """
     ndim = len(rects)
     c = canvas
@@ -607,7 +552,7 @@ def _build_axes_form(
                 continue
             x0, y0, w, h = rect
             if j == i:
-                c.setFont("Helvetica", labelfontsize)
+                c.setFont(fontname, labelfontsize)
                 c.drawCentredString(x0 + w / 2, y0 + h, labels[j])
                 c.line(x0, y0, x0 + w, y0)
             else:
@@ -618,10 +563,10 @@ def _build_axes_form(
                     ty = y0 + (t - lo) * (h / (hi - lo))
                     c.line(x0 - 2, ty, x0 + 2, ty)
                     if j == 0:
-                        c.setFont("Helvetica", tickfontsize)
+                        c.setFont(fontname, tickfontsize)
                         c.drawRightString(x0 - 4, ty - 2, tl)
                 if j == 0:
-                    c.setFont("Helvetica", labelfontsize)
+                    c.setFont(fontname, labelfontsize)
                     c.drawRightString(x0 - 10 - labelfontsize, y0 + h / 2, labels[i])
             # ticks bottom
             lo, hi = limits[j]
@@ -630,10 +575,10 @@ def _build_axes_form(
                 tx = x0 + (t - lo) * (w / (hi - lo))
                 c.line(tx, y0, tx, y0 + 2)
                 if i == ndim - 1:
-                    c.setFont("Helvetica", tickfontsize)
+                    c.setFont(fontname, tickfontsize)
                     c.drawCentredString(tx, y0 - 1 - tickfontsize, tl)
             if i == ndim - 1:
-                c.setFont("Helvetica", labelfontsize)
+                c.setFont(fontname, labelfontsize)
                 c.drawCentredString(x0 + w / 2, y0 - 10 - labelfontsize, labels[j])
             # ticks left
     c.endForm()
@@ -645,7 +590,7 @@ def plot_gmm_corner_pdf(
     bins=40,
     limits=None,
     levels=[0.393, 0.675, 0.864],
-    color=black,
+    color=navy,
     scale=1.0,
     width=600,
     height=600,
@@ -653,8 +598,10 @@ def plot_gmm_corner_pdf(
     linewidth=0.5,
     labels=None,
     truths=None,
-    simplify_tol_px=0.0,
+    truthcolor=purple,
+    truthlinewidth=1.0,
     tick_count=4,
+    fontname="Helvetica"
 ):
     """Make analytic corner plot from a Gaussian Mixture model.
 
@@ -686,10 +633,14 @@ def plot_gmm_corner_pdf(
         name for each parameter.
     truths: list
         list of true values for each parameter.
-    simplify_tol_px: float
-        Douglas–Peucker tolerance in panel pixels for contour path simplification.
+    truthcolor: reportlab.lib.colors.Color or (r,g,b)
+        Stroke color for lines indicating true value.
+    truthlinewidth: float
+        Line width in PDF units.
     tick_count: int
         maximum number of ticks.
+    fontname: str
+        font name
     """
     n_dim = gmm.means_.shape[1]
 
@@ -730,10 +681,11 @@ def plot_gmm_corner_pdf(
     labelfontsize = 8 * scale
     rects = _compute_rects(n_dim, width, height, margin)
     _build_axes_form(
-        pdf_c, rects, labels, limits, tick_count, tickfontsize, labelfontsize
+        pdf_c, rects, labels, limits, tick_count, tickfontsize, labelfontsize, fontname=fontname
     )
 
     color = _to_rl_color(color)
+    truthcolor = _to_rl_color(truthcolor)
 
     # Start a new page and stamp axes
     pdf_c.doForm("axes")
@@ -764,7 +716,7 @@ def plot_gmm_corner_pdf(
         # Truth vertical line on diagonal
         if np.isfinite(truths[i]):
             _draw_vline_pdf(
-                pdf_c, rect, limits[i], (0.0, 1.0), truths[i], color=color, lw=linewidth
+                pdf_c, rect, limits[i], (0.0, 1.0), truths[i], color=truthcolor, lw=truthlinewidth
             )
 
     # Lower-triangular 2D panels
@@ -793,7 +745,6 @@ def plot_gmm_corner_pdf(
                     level_segs=level_segs,
                     color=color,
                     lw=linewidth,
-                    simplify_tol=simplify_tol_px,
                     clip=True,
                 )
 
@@ -805,8 +756,8 @@ def plot_gmm_corner_pdf(
                     limits[j],
                     limits[i],
                     truths[j],
-                    color=color,
-                    lw=linewidth,
+                    color=truthcolor,
+                    lw=truthlinewidth,
                 )
             if np.isfinite(truths[i]):
                 _draw_hline_pdf(
@@ -815,8 +766,8 @@ def plot_gmm_corner_pdf(
                     limits[j],
                     limits[i],
                     truths[i],
-                    color=color,
-                    lw=linewidth,
+                    color=truthcolor,
+                    lw=truthlinewidth,
                 )
 
     # Finish the page
