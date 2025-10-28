@@ -5,7 +5,7 @@
 LightGMM
 ========
 
-LightGMM is a extremely fast construction of a GMM for large data sets.
+LightGMM is a extremely fast construction of a Gaussian Mixture Model (GMM) for large data sets.
 
 Features:
 
@@ -13,8 +13,14 @@ Features:
 * supports weighted observations
 * can be converted into a scikit-learn GaussianMixture
 
+The name is an hommage to the much more famous LightGBM library.
+LightGMM makes Gaussian mixture models fast.
+
 Method
 ------
+
+The recommended method is a single expectation maximization (EM) step,
+from centers initialised at randomly selected data samples.
 
 If refine_weights=False, LightGMM relies on scikit-learn's KMeans 
 for initialisation, using kmeans++ or random data samples 
@@ -40,6 +46,8 @@ Usage
 
 The API is scikit-learn-like::
 
+    from askcarl.lightgmm import LightGMM
+
     gmm = LightGMM(**kwargs)
     gmm.fit(X_train)
     logprob = gmm.score_samples(X_test)
@@ -59,3 +67,19 @@ with 50000 samples and ~15 features.
 
 See this benchmark: https://github.com/JohannesBuchner/GMM-benchmark
 
+Ensemble GMM with Bagging
+-------------------------
+
+Fitting a GMM to samples tends to overfit. This can be avoided
+by fitting an ensemble of GMMs, which are then pooled::
+
+    from askcarl.lightgmm import LightBaggingGMM
+
+    gmm = LightBaggingGMM(**kwargs)
+    gmm.fit(X_train)
+
+You can convert to a scikit-learn GaussianMixture object::
+
+    gmmsk = gmm.to_sklearn()
+
+See the `API documentation of the LightGMM module <askcarl.html#module-askcarl.lightgmm>`_.
