@@ -37,7 +37,7 @@ for ndim, scale in (2, 2.0), (5, 1.5), (10, 1.0), (25, 0.8):
                         f'plotcorner_{"mono" if D == 0 else "dual"}_{ndim}d_N{abs(M)}_corr{i}.pdf',
                         gmm, levels=[0.393, 0.675, 0.864], scale=scale,
                         truths=np.arange(ndim), linewidth=0.5 * scale, truthlinewidth=1.0 * scale,
-                        margin=40. / scale,
+                        margin=80. / scale, fontname="Times-Roman"
                         )
                 #fig, axes = plot_gmm_corner_pdf(gmm, levels=[0.393, 0.675, 0.864], max_err_frac=0.1)
                 #fig.savefig(f'plotcorner_{"mono" if D == 0 else "dual"}_{ndim}d_N{abs(M)}_corr{i}.pdf')
