@@ -15,10 +15,6 @@ X = np.vstack([
     np.random.multivariate_normal(0 + np.arange(ndim), np.eye(ndim), 3000 * ndim),
     np.random.multivariate_normal(3 + np.arange(ndim), np.eye(ndim), 3000 * ndim)
 ])
-X[:,0] /= 1000
-X[:,1] /= 100
-X[:,-1] = X[:,-1] / 10 + 100
-X[:,-2] *= 3
 
 t0 = time.time()
 lgmm = LightBaggingGMM(n_gmms=20, n_components=10)
@@ -34,8 +30,8 @@ print(f'custom corner pdf: {time.time() - t0:.2f}s')
 
 t0 = time.time()
 Y, _ = lgmm.sample(100000)
-fig = corner.corner(Y, plot_datapoints=False, plot_density=False, levels=[0.393, 0.675, 0.864])
-corner.corner(X, plot_datapoints=False, plot_density=False, levels=[0.393, 0.675, 0.864], fig=fig)
+fig = corner.corner(Y, weights=np.ones(len(Y))/len(Y), plot_datapoints=False, plot_density=False, levels=[0.393, 0.675, 0.864])
+corner.corner(X, weights=np.ones(len(X))/len(X), plot_datapoints=False, plot_density=False, levels=[0.393, 0.675, 0.864], fig=fig, color='red')
 plt.savefig('plotcorner1.pdf')
 plt.close()
 print(f'sample + corner: {time.time() - t0:.2f}s')
