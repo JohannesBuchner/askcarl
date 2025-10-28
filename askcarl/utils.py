@@ -173,7 +173,7 @@ class univariate_normal:
         float
             pdf value.
         """
-        return np.exp(-0.5 * ((x - self.mean) / self.std)**2) / np.sqrt(2 * np.pi) / self.std
+        return np.exp(-0.5 * ((x.flatten() - self.mean) / self.std)**2) / np.sqrt(2 * np.pi) / self.std
 
     def logpdf(self, x):
         """Return log of probability density.
@@ -188,7 +188,7 @@ class univariate_normal:
         float
             logpdf value.
         """
-        return -0.5 * ((x - self.mean) / self.std)**2 - 0.5 * np.log(2 * np.pi * self.std**2)
+        return -0.5 * ((x.flatten() - self.mean) / self.std)**2 - 0.5 * np.log(2 * np.pi * self.std**2)
 
     def logcdf(self, x):
         """Return log of the cumulative probability.
