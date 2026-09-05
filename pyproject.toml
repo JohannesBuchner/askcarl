@@ -42,7 +42,7 @@ plot = ["matplotlib", "scipy"]
 [project.urls]
 Homepage = "https://github.com/JohannesBuchner/askcarl"
 
-[tool:pytest]
+[tool.pytest]
 collect_ignore = ["setup.py"]
 
 [flake8]
