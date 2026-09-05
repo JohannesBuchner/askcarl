@@ -4,4 +4,3 @@ jax
 scikit-learn
 matplotlib
 reportlab
-pypmc
