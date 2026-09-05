@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "askcarl"
+version = "3.0.1"
+description = "Gaussian mixture models with support for missing values and upper limits in some features."
+authors = [
+    {name = "Johannes Buchner", email = "johannes.buchner.acad@gmx.com"}
+]
+license = {text = "GNU General Public License v3"}
+requires-python = ">=3.7"
+keywords = ["Multivariate Gaussians with support for upper limits and missing data"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "numpy",
+    "jax",
+    "scipy",
+    "matplotlib",
+    "reportlab",
+    "scikit-learn",
+]
+
+[project.optional-dependencies]
+plot = ["matplotlib", "scipy"]
+
+[project.urls]
+Homepage = "https://github.com/JohannesBuchner/askcarl"
+
+[tool:pytest]
+collect_ignore = ["setup.py"]
+
+[flake8]
+style = "numpy"
+check-return-types = false
+exclude = "docs"
+extend-ignore = "E501,F401,E128,E231,E124,SIM114,DOC105,DOC106,DOC107,DOC301,DOC501,DOC503,DOC203,B006,SIM102,SIM113,DOC202,DOC403,DOC404"
+
+[pycodestyle]
+count = false
+ignore = "W191,W291,W293,E231,E225"
+max-line-length = 160
+statistics = false
+
+[pydocstyle]
+add-ignore = "D107"

@@ -1,0 +1,6 @@
+numpy
+scipy
+jax
+scikit-learn
+matplotlib
+reportlab
