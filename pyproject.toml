@@ -47,6 +47,23 @@ Documentation = "https://johannesbuchner.github.io/askcarl/"
 [tool.pytest]
 collect_ignore = ["setup.py"]
 
+[tool.bumpversion]
+current_version = "3.0.1"
+commit = true
+tag = true
+tag_name = "{new_version}"
+message = "Bump version: {current_version} → {new_version}"
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "askcarl/__init__.py"
+search = "__version__ = '{current_version}'"
+replace = "__version__ = '{new_version}'"
+
 [flake8]
 style = "numpy"
 check-return-types = false
