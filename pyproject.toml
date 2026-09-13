@@ -63,6 +63,3 @@ replace = 'version = "{new_version}"'
 filename = "askcarl/__init__.py"
 search = "__version__ = '{current_version}'"
 replace = "__version__ = '{new_version}'"
-
-[pydocstyle]
-add-ignore = "D107"
