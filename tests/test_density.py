@@ -600,6 +600,8 @@ from  sklearn.mixture._gaussian_mixture import _estimate_log_gaussian_prob
 ).via("discovered failure")
 def test_mixture(mixture):
     ndim, ncomponents, means, covs, weights, x = mixture
+    covs = np.array(covs)
+    means = np.array(means)
     mask = np.ones(x.shape, dtype=bool)
 
     if not all([valid_covariance_matrix(cov) for cov in covs]):
