@@ -9,7 +9,8 @@ description = "Gaussian mixture models with support for missing values and upper
 authors = [
     {name = "Johannes Buchner", email = "johannes.buchner.acad@gmx.com"}
 ]
-license = {text = "GNU General Public License v3"}
+license = "GPL-3.0"
+readme = "README.rst"
 requires-python = ">=3.7"
 keywords = ["Multivariate Gaussians with support for upper limits and missing data"]
 classifiers = [
@@ -40,6 +41,8 @@ plot = ["matplotlib", "scipy"]
 
 [project.urls]
 Homepage = "https://github.com/JohannesBuchner/askcarl"
+Source = "https://github.com/JohannesBuchner/askcarl"
+Documentation = "https://johannesbuchner.github.io/askcarl/"
 
 [tool.pytest]
 collect_ignore = ["setup.py"]
