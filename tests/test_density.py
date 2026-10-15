@@ -632,7 +632,7 @@ def test_mixture(mixture):
     assert_allclose(askcarl_logp[pypmc_logp>-100000], pypmc_logp[pypmc_logp>-100000], atol=1)
     assert_allclose(askcarl_logp[askcarl_logp>-100000], askcarl_logp[askcarl_logp>-100000], atol=1)
 
-    precisions = [np.linalg.inv(cov) for cov in covs]
+    precisions = np.array([np.linalg.inv(cov) for cov in covs])
     # compare results of GMM to sklearn
     try:
         skgmm = sklearn.mixture.GaussianMixture(
