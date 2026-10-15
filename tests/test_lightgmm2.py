@@ -86,8 +86,8 @@ def test_two_gauss():
         np.testing.assert_allclose(means_high, 10, atol=0.02 * D)
         score = gmm.score(X)
         Y, labels = gmm.sample(10000)
-        A = Y[np.in1d(labels, np.where(label_low)[0]),:]
-        B = Y[np.in1d(labels, np.where(label_high)[0]),:]
+        A = Y[np.isin(labels, np.where(label_low)[0]),:]
+        B = Y[np.isin(labels, np.where(label_high)[0]),:]
         print(A.shape, B.shape)
         assert len(A) + len(B) == len(Y)
         print(A.mean(axis=0))

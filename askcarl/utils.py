@@ -141,7 +141,7 @@ class univariate_normal:
             covariance matrix. shape (D, D)
         """
         self.mean = mean
-        self.std = float(np.sqrt(cov))
+        self.std = np.sqrt(cov).item()
 
     def cdf(self, x):
         """Return cumulative probability.
